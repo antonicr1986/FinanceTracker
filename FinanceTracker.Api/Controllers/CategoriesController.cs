@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Domain.Entities;
+﻿using FinanceTracker.Application.DTOs.Categories;
+using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,13 +18,65 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+    public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
     {
-        return await _context.Categories.ToListAsync();
+        var categories = await _context.Categories
+            .Select(category => new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Type = category.Type
+            })
+            .ToListAsync();
+
+        return Ok(categories);
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Category>> GetCategory(int id)
+    public async Task<ActionResult<CategoryDto>> GetCategory(int id)
+    {
+        var category = await _context.Categories
+            .Where(category => category.Id == id)
+            .Select(category => new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Type = category.Type
+            })
+            .FirstOrDefaultAsync();
+
+        if (category == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(category);
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
+    {
+        var category = new Category
+        {
+            Name = createCategoryDto.Name,
+            Type = createCategoryDto.Type
+        };
+
+        _context.Categories.Add(category);
+        await _context.SaveChangesAsync();
+
+        var categoryDto = new CategoryDto
+        {
+            Id = category.Id,
+            Name = category.Name,
+            Type = category.Type
+        };
+
+        return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, categoryDto);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto updateCategoryDto)
     {
         var category = await _context.Categories.FindAsync(id);
 
@@ -32,27 +85,9 @@ public class CategoriesController : ControllerBase
             return NotFound();
         }
 
-        return category;
-    }
+        category.Name = updateCategoryDto.Name;
+        category.Type = updateCategoryDto.Type;
 
-    [HttpPost]
-    public async Task<ActionResult<Category>> CreateCategory(Category category)
-    {
-        _context.Categories.Add(category);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, category);
-    }
-
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateCategory(int id, Category category)
-    {
-        if (id != category.Id)
-        {
-            return BadRequest();
-        }
-
-        _context.Entry(category).State = EntityState.Modified;
         await _context.SaveChangesAsync();
 
         return NoContent();
