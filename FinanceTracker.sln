@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceTracker.Domain", "Fi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceTracker.Application", "FinanceTracker.Application\FinanceTracker.Application.csproj", "{5BF1F48F-26B6-477A-85EF-CA2449A9B43E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceTracker.Infraestructure", "FinanceTracker.Infraestructure\FinanceTracker.Infraestructure.csproj", "{0DE687ED-36A5-4FF0-862E-749A1F2596F0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceTracker.Infrastructure", "FinanceTracker.Infraestructure\FinanceTracker.Infrastructure.csproj", "{0DE687ED-36A5-4FF0-862E-749A1F2596F0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceTracker.Tests", "FinanceTracker.Tests\FinanceTracker.Tests.csproj", "{2CF06040-0CBA-4772-9771-E05AF44DF458}"
 EndProject
