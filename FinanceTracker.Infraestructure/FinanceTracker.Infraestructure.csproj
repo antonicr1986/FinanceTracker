@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceTracker.Application\FinanceTracker.Application.csproj" />
+    <ProjectReference Include="..\FinanceTracker.Domain\FinanceTracker.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
