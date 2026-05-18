@@ -48,17 +48,18 @@ public class TransactionService : ITransactionService
         }
 
         return await query
-            .Select(transaction => new TransactionDto
-            {
-                Id = transaction.Id,
-                Description = transaction.Description,
-                Amount = transaction.Amount,
-                Date = transaction.Date,
-                Type = transaction.Type,
-                CategoryId = transaction.CategoryId,
-                CategoryName = transaction.Category.Name
-            })
-            .ToListAsync();
+        .OrderByDescending(transaction => transaction.Date)
+        .Select(transaction => new TransactionDto
+        {
+            Id = transaction.Id,
+            Description = transaction.Description,
+            Amount = transaction.Amount,
+            Date = transaction.Date,
+            Type = transaction.Type,
+            CategoryId = transaction.CategoryId,
+            CategoryName = transaction.Category.Name
+        })
+        .ToListAsync();
     }
 
     public async Task<TransactionDto?> GetByIdAsync(int id)
