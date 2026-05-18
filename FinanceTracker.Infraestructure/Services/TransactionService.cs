@@ -50,6 +50,8 @@ public class TransactionService : ITransactionService
 
         return await query
         .OrderByDescending(transaction => transaction.Date)
+        .Skip((filter.PageNumber - 1) * filter.PageSize)
+        .Take(filter.PageSize)
         .Select(transaction => new TransactionDto
         {
             Id = transaction.Id,
