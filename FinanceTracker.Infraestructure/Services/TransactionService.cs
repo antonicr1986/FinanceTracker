@@ -1,14 +1,15 @@
-﻿using System;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Transactions;
+using FinanceTracker.Application.Interfaces;
+using FinanceTracker.Domain.Entities;
+using FinanceTracker.Domain.Enums;
+using FinanceTracker.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FinanceTracker.Application.DTOs.Transactions;
-using FinanceTracker.Application.Interfaces;
-using FinanceTracker.Domain.Entities;
-using FinanceTracker.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
-using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Infrastructure.Services;
 
@@ -146,5 +147,23 @@ public class TransactionService : ITransactionService
         await _context.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task<TransactionSummaryDto> GetSummaryAsync()
+    {
+        var totalIncome = await _context.Transactions
+            .Where(transaction => transaction.Type == TransactionType.Income)
+            .SumAsync(transaction => transaction.Amount);
+
+        var totalExpense = await _context.Transactions
+            .Where(transaction => transaction.Type == TransactionType.Expense)
+            .SumAsync(transaction => transaction.Amount);
+
+        return new TransactionSummaryDto
+        {
+            TotalIncome = totalIncome,
+            TotalExpense = totalExpense,
+            Balance = totalIncome - totalExpense
+        };
     }
 }

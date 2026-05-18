@@ -24,6 +24,14 @@ public class TransactionsController : ControllerBase
         return Ok(transactions);
     }
 
+    [HttpGet("summary")]
+    public async Task<ActionResult<TransactionSummaryDto>> GetSummary()
+    {
+        var summary = await _transactionService.GetSummaryAsync();
+
+        return Ok(summary);
+    }
+
     [HttpGet("{id}")]
     public async Task<ActionResult<TransactionDto>> GetTransaction(int id)
     {

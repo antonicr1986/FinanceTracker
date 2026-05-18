@@ -14,4 +14,6 @@ public interface ITransactionService
     Task<UpdateTransactionResult> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto);
 
     Task<bool> DeleteAsync(int id);
+
+    Task<TransactionSummaryDto> GetSummaryAsync();
 }
