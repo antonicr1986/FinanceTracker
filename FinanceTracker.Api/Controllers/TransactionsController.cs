@@ -41,6 +41,11 @@ public class TransactionsController : ControllerBase
     {
         var transaction = await _transactionService.CreateAsync(createTransactionDto);
 
+        if (transaction is null)
+        {
+            return BadRequest("The selected category does not exist.");
+        }
+
         return CreatedAtAction(
             nameof(GetTransaction),
             new { id = transaction.Id },

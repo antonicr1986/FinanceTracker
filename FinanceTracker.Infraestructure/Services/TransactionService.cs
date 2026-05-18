@@ -55,8 +55,16 @@ public class TransactionService : ITransactionService
             .FirstOrDefaultAsync();
     }
 
-    public async Task<TransactionDto> CreateAsync(CreateTransactionDto createTransactionDto)
+    public async Task<TransactionDto?> CreateAsync(CreateTransactionDto createTransactionDto)
     {
+        var categoryExists = await _context.Categories
+            .AnyAsync(category => category.Id == createTransactionDto.CategoryId);
+
+        if (!categoryExists)
+        {
+            return null;
+        }
+
         var transaction = new Transaction
         {
             Description = createTransactionDto.Description,
@@ -69,9 +77,7 @@ public class TransactionService : ITransactionService
         _context.Transactions.Add(transaction);
         await _context.SaveChangesAsync();
 
-        var createdTransaction = await GetByIdAsync(transaction.Id);
-
-        return createdTransaction!;
+        return await GetByIdAsync(transaction.Id);
     }
 
     public async Task<bool> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto)

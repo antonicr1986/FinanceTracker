@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FinanceTracker.Application.DTOs.Transactions;
+﻿using FinanceTracker.Application.DTOs.Transactions;
 
 namespace FinanceTracker.Application.Interfaces;
 
@@ -13,7 +8,7 @@ public interface ITransactionService
 
     Task<TransactionDto?> GetByIdAsync(int id);
 
-    Task<TransactionDto> CreateAsync(CreateTransactionDto createTransactionDto);
+    Task<TransactionDto?> CreateAsync(CreateTransactionDto createTransactionDto);
 
     Task<bool> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto);
 
