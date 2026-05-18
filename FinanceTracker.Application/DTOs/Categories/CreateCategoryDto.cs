@@ -1,15 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FinanceTracker.Domain.Entities;
 using FinanceTracker.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace FinanceTracker.Application.DTOs.Categories;
 
 public class CreateCategoryDto
 {
+    [Required]
+    [MaxLength(50)]
     public string Name { get; set; } = string.Empty;
 
+    [Required]
     public TransactionType Type { get; set; }
 }
