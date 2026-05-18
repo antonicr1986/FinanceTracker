@@ -1,8 +1,6 @@
 ﻿using FinanceTracker.Application.DTOs.Categories;
-using FinanceTracker.Domain.Entities;
-using FinanceTracker.Infrastructure.Data;
+using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace FinanceTracker.Api.Controllers;
 
@@ -10,24 +8,17 @@ namespace FinanceTracker.Api.Controllers;
 [ApiController]
 public class CategoriesController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ICategoryService _categoryService;
 
-    public CategoriesController(AppDbContext context)
+    public CategoriesController(ICategoryService categoryService)
     {
-        _context = context;
+        _categoryService = categoryService;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
+    public async Task<ActionResult<List<CategoryDto>>> GetCategories()
     {
-        var categories = await _context.Categories
-            .Select(category => new CategoryDto
-            {
-                Id = category.Id,
-                Name = category.Name,
-                Type = category.Type
-            })
-            .ToListAsync();
+        var categories = await _categoryService.GetAllAsync();
 
         return Ok(categories);
     }
@@ -35,17 +26,9 @@ public class CategoriesController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<CategoryDto>> GetCategory(int id)
     {
-        var category = await _context.Categories
-            .Where(category => category.Id == id)
-            .Select(category => new CategoryDto
-            {
-                Id = category.Id,
-                Name = category.Name,
-                Type = category.Type
-            })
-            .FirstOrDefaultAsync();
+        var category = await _categoryService.GetByIdAsync(id);
 
-        if (category == null)
+        if (category is null)
         {
             return NotFound();
         }
@@ -56,39 +39,23 @@ public class CategoriesController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<CategoryDto>> CreateCategory(CreateCategoryDto createCategoryDto)
     {
-        var category = new Category
-        {
-            Name = createCategoryDto.Name,
-            Type = createCategoryDto.Type
-        };
+        var category = await _categoryService.CreateAsync(createCategoryDto);
 
-        _context.Categories.Add(category);
-        await _context.SaveChangesAsync();
-
-        var categoryDto = new CategoryDto
-        {
-            Id = category.Id,
-            Name = category.Name,
-            Type = category.Type
-        };
-
-        return CreatedAtAction(nameof(GetCategory), new { id = category.Id }, categoryDto);
+        return CreatedAtAction(
+            nameof(GetCategory),
+            new { id = category.Id },
+            category);
     }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto updateCategoryDto)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var updated = await _categoryService.UpdateAsync(id, updateCategoryDto);
 
-        if (category == null)
+        if (!updated)
         {
             return NotFound();
         }
-
-        category.Name = updateCategoryDto.Name;
-        category.Type = updateCategoryDto.Type;
-
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
@@ -96,15 +63,12 @@ public class CategoriesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCategory(int id)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var deleted = await _categoryService.DeleteAsync(id);
 
-        if (category == null)
+        if (!deleted)
         {
             return NotFound();
         }
-
-        _context.Categories.Remove(category);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
