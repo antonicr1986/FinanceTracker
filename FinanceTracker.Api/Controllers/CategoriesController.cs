@@ -1,6 +1,7 @@
 ﻿using FinanceTracker.Application.DTOs.Categories;
 using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Api.Controllers;
 
@@ -63,11 +64,16 @@ public class CategoriesController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCategory(int id)
     {
-        var deleted = await _categoryService.DeleteAsync(id);
+        var result = await _categoryService.DeleteAsync(id);
 
-        if (!deleted)
+        if (result == DeleteCategoryResult.CategoryNotFound)
         {
             return NotFound();
+        }
+
+        if (result == DeleteCategoryResult.CategoryHasTransactions)
+        {
+            return BadRequest("Cannot delete category because it has associated transactions.");
         }
 
         return NoContent();

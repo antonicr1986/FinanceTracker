@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FinanceTracker.Application.DTOs.Categories;
+using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Application.Interfaces;
 
@@ -17,5 +18,5 @@ public interface ICategoryService
 
     Task<bool> UpdateAsync(int id, UpdateCategoryDto updateCategoryDto);
 
-    Task<bool> DeleteAsync(int id);
+    Task<DeleteCategoryResult> DeleteAsync(int id);
 }

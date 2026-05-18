@@ -8,6 +8,7 @@ using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Infrastructure.Services;
 
@@ -81,18 +82,26 @@ public class CategoryService : ICategoryService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<DeleteCategoryResult> DeleteAsync(int id)
     {
         var category = await _context.Categories.FindAsync(id);
 
         if (category is null)
         {
-            return false;
+            return DeleteCategoryResult.CategoryNotFound;
+        }
+
+        var hasTransactions = await _context.Transactions
+            .AnyAsync(transaction => transaction.CategoryId == id);
+
+        if (hasTransactions)
+        {
+            return DeleteCategoryResult.CategoryHasTransactions;
         }
 
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();
 
-        return true;
+        return DeleteCategoryResult.Success;
     }
 }
