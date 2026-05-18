@@ -150,4 +150,56 @@ public class TransactionServiceTests
         // Assert
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldReturnPaginatedResults()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "General",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Old transaction",
+                Amount = 10m,
+                Date = new DateTime(2026, 5, 1),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            },
+            new Transaction
+            {
+                Description = "New transaction",
+                Amount = 20m,
+                Date = new DateTime(2026, 5, 20),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var filter = new TransactionFilterDto
+        {
+            PageNumber = 1,
+            PageSize = 1
+        };
+
+        // Act
+        var result = await service.GetAllAsync(filter);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("New transaction", result[0].Description);
+    }
 }
