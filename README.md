@@ -1,10 +1,10 @@
-# FinanceTracker
+# 💰 FinanceTracker
 
 FinanceTracker is a personal finance tracking API built with .NET 8, Entity Framework Core and SQL Server LocalDB.
 
 The goal of this project is to practice and demonstrate backend development skills using a layered architecture, DTOs, services, validation, Entity Framework Core and automated tests.
 
-## Features
+## ✨ Features
 
 - Manage income and expense categories
 - Manage financial transactions
@@ -20,7 +20,7 @@ The goal of this project is to practice and demonstrate backend development skil
   - Categories with associated transactions cannot be deleted
 - Automated tests with xUnit and EF Core InMemory
 
-## Technologies
+## 🛠️ Technologies
 
 - .NET 8
 - ASP.NET Core Web API
@@ -31,7 +31,7 @@ The goal of this project is to practice and demonstrate backend development skil
 - Swagger / OpenAPI
 - Git / GitHub
 
-## Architecture
+## 🧱 Architecture
 
 The solution follows a layered architecture:
 
@@ -42,29 +42,29 @@ FinanceTracker
 ├── FinanceTracker.Infrastructure
 └── FinanceTracker.Tests
 
-### FinanceTracker.Api
+### 🌐 FinanceTracker.Api
 
 Contains the REST API controllers and application startup configuration.
 
-### FinanceTracker.Application
+### 📦 FinanceTracker.Application
 
 Contains DTOs, interfaces and application-level contracts.
 
-### FinanceTracker.Domain
+### 🧠 FinanceTracker.Domain
 
 Contains the main domain entities and enums.
 
-### FinanceTracker.Infrastructure
+### 🗄️ FinanceTracker.Infrastructure
 
 Contains Entity Framework Core configuration, database context, migrations and service implementations.
 
-### FinanceTracker.Tests
+### 🧪 FinanceTracker.Tests
 
 Contains automated tests for the application logic.
 
-## Main Endpoints
+## 🔗 Main Endpoints
 
-### Categories
+### 📁 Categories
 
 GET /api/Categories  
 GET /api/Categories/{id}  
@@ -72,7 +72,7 @@ POST /api/Categories
 PUT /api/Categories/{id}  
 DELETE /api/Categories/{id}
 
-### Transactions
+### 💳 Transactions
 
 GET /api/Transactions  
 GET /api/Transactions/{id}  
@@ -80,13 +80,13 @@ POST /api/Transactions
 PUT /api/Transactions/{id}  
 DELETE /api/Transactions/{id}
 
-### Transaction Filters
+### 🔎 Transaction Filters
 
 GET /api/Transactions?type=2  
 GET /api/Transactions?categoryId=4  
 GET /api/Transactions?fromDate=2026-05-01&toDate=2026-05-31
 
-### Financial Summary
+### 📊 Financial Summary
 
 GET /api/Transactions/summary  
 GET /api/Transactions/summary?fromDate=2026-05-01&toDate=2026-05-31  
@@ -100,15 +100,15 @@ Example response:
   "balance": 1650
 }
 
-## Getting Started
+## 🚀 Getting Started
 
-### Prerequisites
+### ✅ Prerequisites
 
 - Visual Studio 2022
 - .NET 8 SDK
 - SQL Server LocalDB
 
-### Database Setup
+### 🗃️ Database Setup
 
 The project uses SQL Server LocalDB.
 
@@ -128,7 +128,7 @@ Or using the .NET CLI:
 
 dotnet ef database update
 
-## Running the API
+## ▶️ Running the API
 
 Set `FinanceTracker.Api` as the startup project and run the application.
 
@@ -136,13 +136,13 @@ Swagger will be available at:
 
 https://localhost:{port}/swagger
 
-## Running Tests
+## 🧪 Running Tests
 
 Tests can be executed from Visual Studio Test Explorer or with:
 
 dotnet test
 
-## Project Status
+## 📌 Project Status
 
 Current status: MVP in progress.
 
@@ -168,7 +168,7 @@ Planned improvements:
 - Improved Swagger documentation
 - Deployment guide
 
-## Purpose
+## 🎯 Purpose
 
 This project is part of my portfolio as a junior .NET developer.
 
