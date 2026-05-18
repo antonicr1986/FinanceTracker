@@ -25,9 +25,9 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet("summary")]
-    public async Task<ActionResult<TransactionSummaryDto>> GetSummary()
+    public async Task<ActionResult<TransactionSummaryDto>> GetSummary([FromQuery] TransactionFilterDto filter)
     {
-        var summary = await _transactionService.GetSummaryAsync();
+        var summary = await _transactionService.GetSummaryAsync(filter);
 
         return Ok(summary);
     }

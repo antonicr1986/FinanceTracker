@@ -15,5 +15,5 @@ public interface ITransactionService
 
     Task<bool> DeleteAsync(int id);
 
-    Task<TransactionSummaryDto> GetSummaryAsync();
+    Task<TransactionSummaryDto> GetSummaryAsync(TransactionFilterDto filter);
 }
