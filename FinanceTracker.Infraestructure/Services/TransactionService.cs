@@ -8,6 +8,7 @@ using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Infrastructure.Services;
 
@@ -80,13 +81,21 @@ public class TransactionService : ITransactionService
         return await GetByIdAsync(transaction.Id);
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto)
+    public async Task<UpdateTransactionResult> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto)
     {
         var transaction = await _context.Transactions.FindAsync(id);
 
         if (transaction is null)
         {
-            return false;
+            return UpdateTransactionResult.TransactionNotFound;
+        }
+
+        var categoryExists = await _context.Categories
+            .AnyAsync(category => category.Id == updateTransactionDto.CategoryId);
+
+        if (!categoryExists)
+        {
+            return UpdateTransactionResult.CategoryNotFound;
         }
 
         transaction.Description = updateTransactionDto.Description;
@@ -97,7 +106,7 @@ public class TransactionService : ITransactionService
 
         await _context.SaveChangesAsync();
 
-        return true;
+        return UpdateTransactionResult.Success;
     }
 
     public async Task<bool> DeleteAsync(int id)

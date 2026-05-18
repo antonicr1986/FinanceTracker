@@ -1,4 +1,5 @@
 ﻿using FinanceTracker.Application.DTOs.Transactions;
+using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Application.Interfaces;
 
@@ -10,7 +11,7 @@ public interface ITransactionService
 
     Task<TransactionDto?> CreateAsync(CreateTransactionDto createTransactionDto);
 
-    Task<bool> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto);
+    Task<UpdateTransactionResult> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto);
 
     Task<bool> DeleteAsync(int id);
 }

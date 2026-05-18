@@ -1,6 +1,7 @@
 ﻿using FinanceTracker.Application.DTOs.Transactions;
 using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using FinanceTracker.Application.Common;
 
 namespace FinanceTracker.Api.Controllers;
 
@@ -55,11 +56,16 @@ public class TransactionsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateTransaction(int id, UpdateTransactionDto updateTransactionDto)
     {
-        var updated = await _transactionService.UpdateAsync(id, updateTransactionDto);
+        var result = await _transactionService.UpdateAsync(id, updateTransactionDto);
 
-        if (!updated)
+        if (result == UpdateTransactionResult.TransactionNotFound)
         {
             return NotFound();
+        }
+
+        if (result == UpdateTransactionResult.CategoryNotFound)
+        {
+            return BadRequest("The selected category does not exist.");
         }
 
         return NoContent();
