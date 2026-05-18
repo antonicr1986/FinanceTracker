@@ -17,9 +17,9 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<TransactionDto>>> GetTransactions()
+    public async Task<ActionResult<List<TransactionDto>>> GetTransactions([FromQuery] TransactionFilterDto filter)
     {
-        var transactions = await _transactionService.GetAllAsync();
+        var transactions = await _transactionService.GetAllAsync(filter);
 
         return Ok(transactions);
     }

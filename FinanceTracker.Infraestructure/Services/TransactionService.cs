@@ -21,10 +21,33 @@ public class TransactionService : ITransactionService
         _context = context;
     }
 
-    public async Task<List<TransactionDto>> GetAllAsync()
+    public async Task<List<TransactionDto>> GetAllAsync(TransactionFilterDto filter)
     {
-        return await _context.Transactions
+        var query = _context.Transactions
             .Include(transaction => transaction.Category)
+            .AsQueryable();
+
+        if (filter.Type.HasValue)
+        {
+            query = query.Where(transaction => transaction.Type == filter.Type.Value);
+        }
+
+        if (filter.CategoryId.HasValue)
+        {
+            query = query.Where(transaction => transaction.CategoryId == filter.CategoryId.Value);
+        }
+
+        if (filter.FromDate.HasValue)
+        {
+            query = query.Where(transaction => transaction.Date >= filter.FromDate.Value);
+        }
+
+        if (filter.ToDate.HasValue)
+        {
+            query = query.Where(transaction => transaction.Date <= filter.ToDate.Value);
+        }
+
+        return await query
             .Select(transaction => new TransactionDto
             {
                 Id = transaction.Id,

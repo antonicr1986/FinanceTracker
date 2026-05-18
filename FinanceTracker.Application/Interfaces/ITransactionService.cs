@@ -5,7 +5,7 @@ namespace FinanceTracker.Application.Interfaces;
 
 public interface ITransactionService
 {
-    Task<List<TransactionDto>> GetAllAsync();
+    Task<List<TransactionDto>> GetAllAsync(TransactionFilterDto filter);
 
     Task<TransactionDto?> GetByIdAsync(int id);
 
