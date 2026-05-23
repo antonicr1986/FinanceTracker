@@ -46,7 +46,7 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<TransactionDto>> CreateTransaction(CreateTransactionDto createTransactionDto)
+    public async Task<ActionResult<TransactionDto>> CreateTransaction([FromBody] CreateTransactionDto createTransactionDto)
     {
         var transaction = await _transactionService.CreateAsync(createTransactionDto);
 
@@ -62,7 +62,7 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateTransaction(int id, UpdateTransactionDto updateTransactionDto)
+    public async Task<IActionResult> UpdateTransaction(int id, [FromBody] UpdateTransactionDto updateTransactionDto)
     {
         var result = await _transactionService.UpdateAsync(id, updateTransactionDto);
 
