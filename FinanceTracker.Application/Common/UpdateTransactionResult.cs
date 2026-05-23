@@ -4,5 +4,6 @@ public enum UpdateTransactionResult
 {
     Success,
     TransactionNotFound,
-    CategoryNotFound
+    CategoryNotFound,
+    CategoryTypeMismatch
 }

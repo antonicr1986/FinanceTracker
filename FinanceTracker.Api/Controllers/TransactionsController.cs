@@ -76,6 +76,11 @@ public class TransactionsController : ControllerBase
             return BadRequest("The selected category does not exist.");
         }
 
+        if (result == UpdateTransactionResult.CategoryTypeMismatch)
+        {
+            return BadRequest("The selected category type does not match the transaction type.");
+        }
+
         return NoContent();
     }
 

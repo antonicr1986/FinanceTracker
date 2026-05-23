@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Transactions;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Transactions;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Domain.Enums;
 using FinanceTracker.Infrastructure.Data;
@@ -295,5 +296,49 @@ public class TransactionServiceTests
 
         // Assert
         Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldReturnCategoryTypeMismatch_WhenCategoryTypeDoesNotMatchTransactionType()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Salary",
+            Type = TransactionType.Income
+        };
+
+        var transaction = new Transaction
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 23),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        context.Categories.Add(category);
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var updateTransactionDto = new UpdateTransactionDto
+        {
+            Description = "Updated groceries",
+            Amount = 120m,
+            Date = new DateTime(2026, 5, 23),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.UpdateAsync(transaction.Id, updateTransactionDto);
+
+        // Assert
+        Assert.Equal(UpdateTransactionResult.CategoryTypeMismatch, result);
     }
 }

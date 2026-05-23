@@ -85,10 +85,15 @@ public class TransactionService : ITransactionService
 
     public async Task<TransactionDto?> CreateAsync(CreateTransactionDto createTransactionDto)
     {
-        var categoryExists = await _context.Categories
-            .AnyAsync(category => category.Id == createTransactionDto.CategoryId);
+        var category = await _context.Categories
+            .FirstOrDefaultAsync(category => category.Id == createTransactionDto.CategoryId);
 
-        if (!categoryExists)
+        if (category is null)
+        {
+            return null;
+        }
+
+        if (category.Type != createTransactionDto.Type)
         {
             return null;
         }
@@ -117,12 +122,17 @@ public class TransactionService : ITransactionService
             return UpdateTransactionResult.TransactionNotFound;
         }
 
-        var categoryExists = await _context.Categories
-            .AnyAsync(category => category.Id == updateTransactionDto.CategoryId);
+        var category = await _context.Categories
+            .FirstOrDefaultAsync(category => category.Id == updateTransactionDto.CategoryId);
 
-        if (!categoryExists)
+        if (category is null)
         {
             return UpdateTransactionResult.CategoryNotFound;
+        }
+
+        if (category.Type != updateTransactionDto.Type)
+        {
+            return UpdateTransactionResult.CategoryTypeMismatch;
         }
 
         transaction.Description = updateTransactionDto.Description;
