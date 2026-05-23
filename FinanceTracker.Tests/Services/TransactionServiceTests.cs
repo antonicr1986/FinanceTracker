@@ -202,4 +202,98 @@ public class TransactionServiceTests
         Assert.Single(result);
         Assert.Equal("New transaction", result[0].Description);
     }
+
+    [Fact]
+    public async Task CreateAsync_ShouldCreateTransaction_WhenCategoryExists()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var createTransactionDto = new CreateTransactionDto
+        {
+            Description = "Groceries",
+            Amount = 150m,
+            Date = new DateTime(2026, 5, 18),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.CreateAsync(createTransactionDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Groceries", result.Description);
+        Assert.Equal(150m, result.Amount);
+        Assert.Equal(TransactionType.Expense, result.Type);
+        Assert.Equal(1, result.CategoryId);
+        Assert.Equal("Food", result.CategoryName);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReturnTransaction_WhenTransactionExists()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Transport",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        var transaction = new Transaction
+        {
+            Description = "Fuel",
+            Amount = 50m,
+            Date = new DateTime(2026, 5, 3),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        // Act
+        var result = await service.GetByIdAsync(transaction.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Fuel", result.Description);
+        Assert.Equal(50m, result.Amount);
+        Assert.Equal(TransactionType.Expense, result.Type);
+        Assert.Equal("Transport", result.CategoryName);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReturnNull_WhenTransactionDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new TransactionService(context);
+
+        // Act
+        var result = await service.GetByIdAsync(999);
+
+        // Assert
+        Assert.Null(result);
+    }
 }
