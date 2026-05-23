@@ -9,7 +9,7 @@ public interface ITransactionService
 
     Task<TransactionDto?> GetByIdAsync(int id);
 
-    Task<TransactionDto?> CreateAsync(CreateTransactionDto createTransactionDto);
+    Task<CreateTransactionServiceResult> CreateAsync(CreateTransactionDto createTransactionDto);
 
     Task<UpdateTransactionResult> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto);
 

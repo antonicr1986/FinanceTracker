@@ -48,17 +48,22 @@ public class TransactionsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TransactionDto>> CreateTransaction([FromBody] CreateTransactionDto createTransactionDto)
     {
-        var transaction = await _transactionService.CreateAsync(createTransactionDto);
+        var result = await _transactionService.CreateAsync(createTransactionDto);
 
-        if (transaction is null)
+        if (result.Result == CreateTransactionResult.CategoryNotFound)
         {
             return BadRequest("The selected category does not exist.");
         }
 
+        if (result.Result == CreateTransactionResult.CategoryTypeMismatch)
+        {
+            return BadRequest("The selected category type does not match the transaction type.");
+        }
+
         return CreatedAtAction(
             nameof(GetTransaction),
-            new { id = transaction.Id },
-            transaction);
+            new { id = result.Transaction!.Id },
+            result.Transaction);
     }
 
     [HttpPut("{id}")]

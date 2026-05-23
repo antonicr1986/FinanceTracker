@@ -149,7 +149,8 @@ public class TransactionServiceTests
         var result = await service.CreateAsync(createTransactionDto);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(CreateTransactionResult.CategoryNotFound, result.Result);
+        Assert.Null(result.Transaction);
     }
 
     [Fact]
@@ -235,12 +236,13 @@ public class TransactionServiceTests
         var result = await service.CreateAsync(createTransactionDto);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Groceries", result.Description);
-        Assert.Equal(150m, result.Amount);
-        Assert.Equal(TransactionType.Expense, result.Type);
-        Assert.Equal(1, result.CategoryId);
-        Assert.Equal("Food", result.CategoryName);
+        Assert.Equal(CreateTransactionResult.Success, result.Result);
+        Assert.NotNull(result.Transaction);
+        Assert.Equal("Groceries", result.Transaction.Description);
+        Assert.Equal(150m, result.Transaction.Amount);
+        Assert.Equal(TransactionType.Expense, result.Transaction.Type);
+        Assert.Equal(1, result.Transaction.CategoryId);
+        Assert.Equal("Food", result.Transaction.CategoryName);
     }
 
     [Fact]
@@ -373,6 +375,7 @@ public class TransactionServiceTests
         var result = await service.CreateAsync(createTransactionDto);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(CreateTransactionResult.CategoryTypeMismatch, result.Result);
+        Assert.Null(result.Transaction);
     }
 }

@@ -60,7 +60,7 @@ public class TransactionService : ITransactionService
             Date = transaction.Date,
             Type = transaction.Type,
             CategoryId = transaction.CategoryId,
-            CategoryName = transaction.Category.Name
+            CategoryName = transaction.Category!.Name
         })
         .ToListAsync();
     }
@@ -78,24 +78,30 @@ public class TransactionService : ITransactionService
                 Date = transaction.Date,
                 Type = transaction.Type,
                 CategoryId = transaction.CategoryId,
-                CategoryName = transaction.Category.Name
+                CategoryName = transaction.Category!.Name
             })
             .FirstOrDefaultAsync();
     }
 
-    public async Task<TransactionDto?> CreateAsync(CreateTransactionDto createTransactionDto)
+    public async Task<CreateTransactionServiceResult> CreateAsync(CreateTransactionDto createTransactionDto)
     {
         var category = await _context.Categories
             .FirstOrDefaultAsync(category => category.Id == createTransactionDto.CategoryId);
 
         if (category is null)
         {
-            return null;
+            return new CreateTransactionServiceResult
+            {
+                Result = CreateTransactionResult.CategoryNotFound
+            };
         }
 
         if (category.Type != createTransactionDto.Type)
         {
-            return null;
+            return new CreateTransactionServiceResult
+            {
+                Result = CreateTransactionResult.CategoryTypeMismatch
+            };
         }
 
         var transaction = new Transaction
@@ -110,7 +116,11 @@ public class TransactionService : ITransactionService
         _context.Transactions.Add(transaction);
         await _context.SaveChangesAsync();
 
-        return await GetByIdAsync(transaction.Id);
+        return new CreateTransactionServiceResult
+        {
+            Result = CreateTransactionResult.Success,
+            Transaction = await GetByIdAsync(transaction.Id)
+        };
     }
 
     public async Task<UpdateTransactionResult> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto)
