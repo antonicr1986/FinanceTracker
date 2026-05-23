@@ -84,4 +84,60 @@ public class DashboardServiceTests
         Assert.Equal(3, result.LatestTransactions.Count);
         Assert.Equal("Fuel", result.LatestTransactions[0].Description);
     }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShouldFilterTransactionsByDateRange()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Old expense",
+                Amount = 100m,
+                Date = new DateTime(2026, 4, 1),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            },
+            new Transaction
+            {
+                Description = "Current expense",
+                Amount = 50m,
+                Date = new DateTime(2026, 5, 15),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new DashboardService(context);
+
+        var filter = new TransactionFilterDto
+        {
+            FromDate = new DateTime(2026, 5, 1),
+            ToDate = new DateTime(2026, 5, 31)
+        };
+
+        // Act
+        var result = await service.GetSummaryAsync(filter);
+
+        // Assert
+        Assert.Equal(0m, result.TotalIncome);
+        Assert.Equal(50m, result.TotalExpense);
+        Assert.Equal(-50m, result.Balance);
+        Assert.Equal(1, result.TransactionCount);
+        Assert.Single(result.LatestTransactions);
+        Assert.Equal("Current expense", result.LatestTransactions[0].Description);
+    }
 }
