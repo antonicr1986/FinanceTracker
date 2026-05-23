@@ -341,4 +341,38 @@ public class TransactionServiceTests
         // Assert
         Assert.Equal(UpdateTransactionResult.CategoryTypeMismatch, result);
     }
+
+    [Fact]
+    public async Task CreateAsync_ShouldReturnNull_WhenCategoryTypeDoesNotMatchTransactionType()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Salary",
+            Type = TransactionType.Income
+        };
+
+        context.Categories.Add(category);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var createTransactionDto = new CreateTransactionDto
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 23),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.CreateAsync(createTransactionDto);
+
+        // Assert
+        Assert.Null(result);
+    }
 }
