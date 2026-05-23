@@ -18,12 +18,19 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories { get; set; }
 
     public DbSet<Transaction> Transactions { get; set; }
+
+    public DbSet<Budget> Budgets { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<Budget>()
+            .Property(budget => budget.Amount)
+            .HasPrecision(18, 2);
+
         modelBuilder.Entity<Transaction>()
-            .Property(t => t.Amount)
+            .Property(transaction => transaction.Amount)
             .HasPrecision(18, 2);
     }
+
 }
