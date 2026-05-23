@@ -123,9 +123,11 @@ public class TransactionServiceTests
         var result = await service.GetAllAsync(filter);
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Groceries", result[0].Description);
-        Assert.Equal(TransactionType.Expense, result[0].Type);
+        Assert.Single(result.Items);
+        Assert.Equal("Groceries", result.Items[0].Description);
+        Assert.Equal(TransactionType.Expense, result.Items[0].Type);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal(1, result.PageNumber);
     }
 
     [Fact]
@@ -201,8 +203,12 @@ public class TransactionServiceTests
         var result = await service.GetAllAsync(filter);
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("New transaction", result[0].Description);
+        Assert.Single(result.Items);
+        Assert.Equal("New transaction", result.Items[0].Description);
+        Assert.Equal(2, result.TotalCount);
+        Assert.Equal(1, result.PageNumber);
+        Assert.Equal(1, result.PageSize);
+        Assert.Equal(2, result.TotalPages);
     }
 
     [Fact]

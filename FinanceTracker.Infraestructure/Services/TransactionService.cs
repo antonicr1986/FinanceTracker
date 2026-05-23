@@ -22,8 +22,11 @@ public class TransactionService : ITransactionService
         _context = context;
     }
 
-    public async Task<List<TransactionDto>> GetAllAsync(TransactionFilterDto filter)
+    public async Task<PagedResult<TransactionDto>> GetAllAsync(TransactionFilterDto filter)
     {
+        var pageNumber = filter.PageNumber < 1 ? 1 : filter.PageNumber;
+        var pageSize = filter.PageSize < 1 ? 10 : filter.PageSize;
+
         var query = _context.Transactions
             .Include(transaction => transaction.Category)
             .AsQueryable();
@@ -48,21 +51,32 @@ public class TransactionService : ITransactionService
             query = query.Where(transaction => transaction.Date <= filter.ToDate.Value);
         }
 
-        return await query
-        .OrderByDescending(transaction => transaction.Date)
-        .Skip((filter.PageNumber - 1) * filter.PageSize)
-        .Take(filter.PageSize)
-        .Select(transaction => new TransactionDto
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(transaction => transaction.Date)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(transaction => new TransactionDto
+            {
+                Id = transaction.Id,
+                Description = transaction.Description,
+                Amount = transaction.Amount,
+                Date = transaction.Date,
+                Type = transaction.Type,
+                CategoryId = transaction.CategoryId,
+                CategoryName = transaction.Category!.Name
+            })
+            .ToListAsync();
+
+        return new PagedResult<TransactionDto>
         {
-            Id = transaction.Id,
-            Description = transaction.Description,
-            Amount = transaction.Amount,
-            Date = transaction.Date,
-            Type = transaction.Type,
-            CategoryId = transaction.CategoryId,
-            CategoryName = transaction.Category!.Name
-        })
-        .ToListAsync();
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+        };
     }
 
     public async Task<TransactionDto?> GetByIdAsync(int id)

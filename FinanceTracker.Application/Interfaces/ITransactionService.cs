@@ -1,11 +1,11 @@
-﻿using FinanceTracker.Application.DTOs.Transactions;
-using FinanceTracker.Application.Common;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Transactions;
 
 namespace FinanceTracker.Application.Interfaces;
 
 public interface ITransactionService
 {
-    Task<List<TransactionDto>> GetAllAsync(TransactionFilterDto filter);
+    Task<PagedResult<TransactionDto>> GetAllAsync(TransactionFilterDto filter);
 
     Task<TransactionDto?> GetByIdAsync(int id);
 
