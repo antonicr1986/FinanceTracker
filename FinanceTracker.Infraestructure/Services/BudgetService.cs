@@ -18,41 +18,80 @@ public class BudgetService : IBudgetService
 
     public async Task<List<BudgetDto>> GetAllAsync()
     {
-        return await _context.Budgets
+        var budgets = await _context.Budgets
             .Include(budget => budget.Category)
             .OrderByDescending(budget => budget.Year)
             .ThenByDescending(budget => budget.Month)
-            .Select(budget => new BudgetDto
+            .ToListAsync();
+
+        var budgetDtos = new List<BudgetDto>();
+
+        foreach (var budget in budgets)
+        {
+            var spentAmount = await _context.Transactions
+                .Where(transaction =>
+                    transaction.Type == budget.Type &&
+                    transaction.Date.Month == budget.Month &&
+                    transaction.Date.Year == budget.Year &&
+                    (!budget.CategoryId.HasValue || transaction.CategoryId == budget.CategoryId.Value))
+                .SumAsync(transaction => transaction.Amount);
+
+            budgetDtos.Add(new BudgetDto
             {
                 Id = budget.Id,
                 Name = budget.Name,
                 Amount = budget.Amount,
+                SpentAmount = spentAmount,
+                RemainingAmount = budget.Amount - spentAmount,
+                UsagePercentage = budget.Amount > 0
+                    ? Math.Round((spentAmount / budget.Amount) * 100, 2)
+                    : 0,
                 Month = budget.Month,
                 Year = budget.Year,
                 Type = budget.Type,
                 CategoryId = budget.CategoryId,
                 CategoryName = budget.Category != null ? budget.Category.Name : null
-            })
-            .ToListAsync();
+            });
+        }
+
+        return budgetDtos;
     }
 
     public async Task<BudgetDto?> GetByIdAsync(int id)
     {
-        return await _context.Budgets
+        var budget = await _context.Budgets
             .Include(budget => budget.Category)
-            .Where(budget => budget.Id == id)
-            .Select(budget => new BudgetDto
-            {
-                Id = budget.Id,
-                Name = budget.Name,
-                Amount = budget.Amount,
-                Month = budget.Month,
-                Year = budget.Year,
-                Type = budget.Type,
-                CategoryId = budget.CategoryId,
-                CategoryName = budget.Category != null ? budget.Category.Name : null
-            })
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(budget => budget.Id == id);
+
+        if (budget is null)
+        {
+            return null;
+        }
+
+        var spentAmount = await _context.Transactions
+            .Where(transaction =>
+                transaction.Type == budget.Type &&
+                transaction.Date.Month == budget.Month &&
+                transaction.Date.Year == budget.Year &&
+                (!budget.CategoryId.HasValue || transaction.CategoryId == budget.CategoryId.Value))
+            .SumAsync(transaction => transaction.Amount);
+
+        return new BudgetDto
+        {
+            Id = budget.Id,
+            Name = budget.Name,
+            Amount = budget.Amount,
+            SpentAmount = spentAmount,
+            RemainingAmount = budget.Amount - spentAmount,
+            UsagePercentage = budget.Amount > 0
+                ? Math.Round((spentAmount / budget.Amount) * 100, 2)
+                : 0,
+            Month = budget.Month,
+            Year = budget.Year,
+            Type = budget.Type,
+            CategoryId = budget.CategoryId,
+            CategoryName = budget.Category != null ? budget.Category.Name : null
+        };
     }
 
     public async Task<CreateBudgetServiceResult> CreateAsync(CreateBudgetDto createBudgetDto)

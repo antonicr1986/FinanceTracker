@@ -343,4 +343,122 @@ public class BudgetServiceTests
         Assert.Equal(BudgetOperationResult.CategoryTypeMismatch, result.Result);
         Assert.Null(result.Budget);
     }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReturnBudgetWithUsageData()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        var budget = new Budget
+        {
+            Name = "Food budget May",
+            Amount = 300m,
+            Month = 5,
+            Year = 2026,
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        context.Budgets.Add(budget);
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Groceries",
+                Amount = 100m,
+                Date = new DateTime(2026, 5, 10),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            },
+            new Transaction
+            {
+                Description = "Fuel",
+                Amount = 50m,
+                Date = new DateTime(2026, 5, 12),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new BudgetService(context);
+
+        // Act
+        var result = await service.GetByIdAsync(budget.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(150m, result.SpentAmount);
+        Assert.Equal(150m, result.RemainingAmount);
+        Assert.Equal(50m, result.UsagePercentage);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldReturnBudgetsWithUsageData()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        context.Budgets.Add(new Budget
+        {
+            Name = "Food budget May",
+            Amount = 300m,
+            Month = 5,
+            Year = 2026,
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        });
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Groceries",
+                Amount = 100m,
+                Date = new DateTime(2026, 5, 10),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            },
+            new Transaction
+            {
+                Description = "Restaurant",
+                Amount = 50m,
+                Date = new DateTime(2026, 5, 12),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new BudgetService(context);
+
+        // Act
+        var result = await service.GetAllAsync();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(150m, result[0].SpentAmount);
+        Assert.Equal(150m, result[0].RemainingAmount);
+        Assert.Equal(50m, result[0].UsagePercentage);
+    }
 }

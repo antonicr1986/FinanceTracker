@@ -10,6 +10,12 @@ public class BudgetDto
 
     public decimal Amount { get; set; }
 
+    public decimal SpentAmount { get; set; }
+
+    public decimal RemainingAmount { get; set; }
+
+    public decimal UsagePercentage { get; set; }
+
     public int Month { get; set; }
 
     public int Year { get; set; }
