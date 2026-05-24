@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Budgets;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Budgets;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
@@ -83,23 +84,28 @@ public class BudgetService : IBudgetService
         return await GetByIdAsync(budget.Id);
     }
 
-    public async Task<bool> UpdateAsync(int id, UpdateBudgetDto updateBudgetDto)
+    public async Task<BudgetOperationResult> UpdateAsync(int id, UpdateBudgetDto updateBudgetDto)
     {
         var budget = await _context.Budgets.FindAsync(id);
 
         if (budget is null)
         {
-            return false;
+            return BudgetOperationResult.BudgetNotFound;
         }
 
         if (updateBudgetDto.CategoryId.HasValue)
         {
-            var categoryExists = await _context.Categories
-                .AnyAsync(category => category.Id == updateBudgetDto.CategoryId.Value);
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(category => category.Id == updateBudgetDto.CategoryId.Value);
 
-            if (!categoryExists)
+            if (category is null)
             {
-                return false;
+                return BudgetOperationResult.CategoryNotFound;
+            }
+
+            if (category.Type != updateBudgetDto.Type)
+            {
+                return BudgetOperationResult.CategoryTypeMismatch;
             }
         }
 
@@ -112,7 +118,7 @@ public class BudgetService : IBudgetService
 
         await _context.SaveChangesAsync();
 
-        return true;
+        return BudgetOperationResult.Success;
     }
 
     public async Task<bool> DeleteAsync(int id)

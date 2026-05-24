@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Budgets;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Budgets;
 using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -55,11 +56,21 @@ public class BudgetsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateBudget(int id, [FromBody] UpdateBudgetDto updateBudgetDto)
     {
-        var updated = await _budgetService.UpdateAsync(id, updateBudgetDto);
+        var result = await _budgetService.UpdateAsync(id, updateBudgetDto);
 
-        if (!updated)
+        if (result == BudgetOperationResult.BudgetNotFound)
         {
             return NotFound();
+        }
+
+        if (result == BudgetOperationResult.CategoryNotFound)
+        {
+            return BadRequest("The selected category does not exist.");
+        }
+
+        if (result == BudgetOperationResult.CategoryTypeMismatch)
+        {
+            return BadRequest("The selected category type does not match the budget type.");
         }
 
         return NoContent();

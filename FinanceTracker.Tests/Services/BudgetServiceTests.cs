@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Budgets;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Budgets;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Domain.Enums;
 using FinanceTracker.Infrastructure.Data;
@@ -218,7 +219,7 @@ public class BudgetServiceTests
         var result = await service.UpdateAsync(budget.Id, updateBudgetDto);
 
         // Assert
-        Assert.True(result);
+        Assert.Equal(BudgetOperationResult.Success, result);
 
         var updatedBudget = await context.Budgets.FindAsync(budget.Id);
 
@@ -256,5 +257,52 @@ public class BudgetServiceTests
 
         var deletedBudget = await context.Budgets.FindAsync(budget.Id);
         Assert.Null(deletedBudget);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldReturnCategoryTypeMismatch_WhenCategoryTypeDoesNotMatchBudgetType()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Salary",
+            Type = TransactionType.Income
+        };
+
+        context.Categories.Add(category);
+
+        var budget = new Budget
+        {
+            Name = "Food budget May",
+            Amount = 300m,
+            Month = 5,
+            Year = 2026,
+            Type = TransactionType.Expense,
+            CategoryId = null
+        };
+
+        context.Budgets.Add(budget);
+        await context.SaveChangesAsync();
+
+        var service = new BudgetService(context);
+
+        var updateBudgetDto = new UpdateBudgetDto
+        {
+            Name = "Food budget May updated",
+            Amount = 350m,
+            Month = 5,
+            Year = 2026,
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.UpdateAsync(budget.Id, updateBudgetDto);
+
+        // Assert
+        Assert.Equal(BudgetOperationResult.CategoryTypeMismatch, result);
     }
 }
