@@ -51,14 +51,15 @@ public class BudgetServiceTests
         var result = await service.CreateAsync(createBudgetDto);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Food budget May", result.Name);
-        Assert.Equal(300m, result.Amount);
-        Assert.Equal(5, result.Month);
-        Assert.Equal(2026, result.Year);
-        Assert.Equal(TransactionType.Expense, result.Type);
-        Assert.Equal(1, result.CategoryId);
-        Assert.Equal("Food", result.CategoryName);
+        Assert.Equal(BudgetOperationResult.Success, result.Result);
+        Assert.NotNull(result.Budget);
+        Assert.Equal("Food budget May", result.Budget.Name);
+        Assert.Equal(300m, result.Budget.Amount);
+        Assert.Equal(5, result.Budget.Month);
+        Assert.Equal(2026, result.Budget.Year);
+        Assert.Equal(TransactionType.Expense, result.Budget.Type);
+        Assert.Equal(1, result.Budget.CategoryId);
+        Assert.Equal("Food", result.Budget.CategoryName);
     }
 
     [Fact]
@@ -83,7 +84,8 @@ public class BudgetServiceTests
         var result = await service.CreateAsync(createBudgetDto);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(BudgetOperationResult.CategoryNotFound, result.Result);
+        Assert.Null(result.Budget);
     }
 
     [Fact]
@@ -304,5 +306,41 @@ public class BudgetServiceTests
 
         // Assert
         Assert.Equal(BudgetOperationResult.CategoryTypeMismatch, result);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ShouldReturnCategoryTypeMismatch_WhenCategoryTypeDoesNotMatchBudgetType()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Salary",
+            Type = TransactionType.Income
+        };
+
+        context.Categories.Add(category);
+        await context.SaveChangesAsync();
+
+        var service = new BudgetService(context);
+
+        var createBudgetDto = new CreateBudgetDto
+        {
+            Name = "Food budget May",
+            Amount = 300m,
+            Month = 5,
+            Year = 2026,
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.CreateAsync(createBudgetDto);
+
+        // Assert
+        Assert.Equal(BudgetOperationResult.CategoryTypeMismatch, result.Result);
+        Assert.Null(result.Budget);
     }
 }

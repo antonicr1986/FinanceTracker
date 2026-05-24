@@ -9,7 +9,7 @@ public interface IBudgetService
 
     Task<BudgetDto?> GetByIdAsync(int id);
 
-    Task<BudgetDto?> CreateAsync(CreateBudgetDto createBudgetDto);
+    Task<CreateBudgetServiceResult> CreateAsync(CreateBudgetDto createBudgetDto);
 
     Task<BudgetOperationResult> UpdateAsync(int id, UpdateBudgetDto updateBudgetDto);
 

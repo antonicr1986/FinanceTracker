@@ -55,16 +55,27 @@ public class BudgetService : IBudgetService
             .FirstOrDefaultAsync();
     }
 
-    public async Task<BudgetDto?> CreateAsync(CreateBudgetDto createBudgetDto)
+    public async Task<CreateBudgetServiceResult> CreateAsync(CreateBudgetDto createBudgetDto)
     {
         if (createBudgetDto.CategoryId.HasValue)
         {
-            var categoryExists = await _context.Categories
-                .AnyAsync(category => category.Id == createBudgetDto.CategoryId.Value);
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(category => category.Id == createBudgetDto.CategoryId.Value);
 
-            if (!categoryExists)
+            if (category is null)
             {
-                return null;
+                return new CreateBudgetServiceResult
+                {
+                    Result = BudgetOperationResult.CategoryNotFound
+                };
+            }
+
+            if (category.Type != createBudgetDto.Type)
+            {
+                return new CreateBudgetServiceResult
+                {
+                    Result = BudgetOperationResult.CategoryTypeMismatch
+                };
             }
         }
 
@@ -81,7 +92,11 @@ public class BudgetService : IBudgetService
         _context.Budgets.Add(budget);
         await _context.SaveChangesAsync();
 
-        return await GetByIdAsync(budget.Id);
+        return new CreateBudgetServiceResult
+        {
+            Result = BudgetOperationResult.Success,
+            Budget = await GetByIdAsync(budget.Id)
+        };
     }
 
     public async Task<BudgetOperationResult> UpdateAsync(int id, UpdateBudgetDto updateBudgetDto)

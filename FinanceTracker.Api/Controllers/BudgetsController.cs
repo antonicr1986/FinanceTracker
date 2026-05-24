@@ -40,17 +40,22 @@ public class BudgetsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<BudgetDto>> CreateBudget([FromBody] CreateBudgetDto createBudgetDto)
     {
-        var budget = await _budgetService.CreateAsync(createBudgetDto);
+        var result = await _budgetService.CreateAsync(createBudgetDto);
 
-        if (budget is null)
+        if (result.Result == BudgetOperationResult.CategoryNotFound)
         {
             return BadRequest("The selected category does not exist.");
         }
 
+        if (result.Result == BudgetOperationResult.CategoryTypeMismatch)
+        {
+            return BadRequest("The selected category type does not match the budget type.");
+        }
+
         return CreatedAtAction(
             nameof(GetBudget),
-            new { id = budget.Id },
-            budget);
+            new { id = result.Budget!.Id },
+            result.Budget);
     }
 
     [HttpPut("{id}")]
