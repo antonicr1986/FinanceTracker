@@ -461,4 +461,59 @@ public class BudgetServiceTests
         Assert.Equal(150m, result[0].RemainingAmount);
         Assert.Equal(50m, result[0].UsagePercentage);
     }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReturnNull_WhenBudgetDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new BudgetService(context);
+
+        // Act
+        var result = await service.GetByIdAsync(999);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldReturnBudgetNotFound_WhenBudgetDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new BudgetService(context);
+
+        var updateBudgetDto = new UpdateBudgetDto
+        {
+            Name = "Updated budget",
+            Amount = 300m,
+            Month = 5,
+            Year = 2026,
+            Type = TransactionType.Expense,
+            CategoryId = null
+        };
+
+        // Act
+        var result = await service.UpdateAsync(999, updateBudgetDto);
+
+        // Assert
+        Assert.Equal(BudgetOperationResult.BudgetNotFound, result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldReturnFalse_WhenBudgetDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new BudgetService(context);
+
+        // Act
+        var result = await service.DeleteAsync(999);
+
+        // Assert
+        Assert.False(result);
+    }
 }
