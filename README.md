@@ -228,7 +228,7 @@ Tests can be executed from Visual Studio Test Explorer or with:
 
 dotnet test
 
-Current automated tests: 23 passing tests.
+Current automated tests: 33 passing tests.
 
 Test coverage currently includes:
 
@@ -237,6 +237,9 @@ Test coverage currently includes:
 - Dashboard service logic
 - Budget service logic
 - Filtering
+- Transaction update and delete scenarios
+- Transaction filtering by category and date range
+- Not found scenarios for budgets and transactions
 
 ## 📌 Project Status
 
