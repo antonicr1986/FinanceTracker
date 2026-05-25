@@ -16,4 +16,8 @@ public class Category
     public TransactionType Type { get; set; }
 
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+
+    public int? UserId { get; set; }
+
+    public User? User { get; set; }
 }
