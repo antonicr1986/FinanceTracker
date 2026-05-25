@@ -384,4 +384,272 @@ public class TransactionServiceTests
         Assert.Equal(CreateTransactionResult.CategoryTypeMismatch, result.Result);
         Assert.Null(result.Transaction);
     }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldReturnSuccess_WhenTransactionAndCategoryExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        var transaction = new Transaction
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 10),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var updateTransactionDto = new UpdateTransactionDto
+        {
+            Description = "Groceries updated",
+            Amount = 120m,
+            Date = new DateTime(2026, 5, 11),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.UpdateAsync(transaction.Id, updateTransactionDto);
+
+        // Assert
+        Assert.Equal(UpdateTransactionResult.Success, result);
+
+        var updatedTransaction = await context.Transactions.FindAsync(transaction.Id);
+
+        Assert.NotNull(updatedTransaction);
+        Assert.Equal("Groceries updated", updatedTransaction.Description);
+        Assert.Equal(120m, updatedTransaction.Amount);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldReturnTransactionNotFound_WhenTransactionDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new TransactionService(context);
+
+        var updateTransactionDto = new UpdateTransactionDto
+        {
+            Description = "Invalid update",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 10),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.UpdateAsync(999, updateTransactionDto);
+
+        // Assert
+        Assert.Equal(UpdateTransactionResult.TransactionNotFound, result);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ShouldReturnCategoryNotFound_WhenCategoryDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var transaction = new Transaction
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 10),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var updateTransactionDto = new UpdateTransactionDto
+        {
+            Description = "Groceries updated",
+            Amount = 120m,
+            Date = new DateTime(2026, 5, 11),
+            Type = TransactionType.Expense,
+            CategoryId = 999
+        };
+
+        // Act
+        var result = await service.UpdateAsync(transaction.Id, updateTransactionDto);
+
+        // Assert
+        Assert.Equal(UpdateTransactionResult.CategoryNotFound, result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldReturnTrue_WhenTransactionExists()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var transaction = new Transaction
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 10),
+            Type = TransactionType.Expense,
+            CategoryId = 1
+        };
+
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        // Act
+        var result = await service.DeleteAsync(transaction.Id);
+
+        // Assert
+        Assert.True(result);
+
+        var deletedTransaction = await context.Transactions.FindAsync(transaction.Id);
+        Assert.Null(deletedTransaction);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldReturnFalse_WhenTransactionDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new TransactionService(context);
+
+        // Act
+        var result = await service.DeleteAsync(999);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldFilterTransactionsByCategory()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var foodCategory = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        var transportCategory = new Category
+        {
+            Id = 2,
+            Name = "Transport",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.AddRange(foodCategory, transportCategory);
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Groceries",
+                Amount = 100m,
+                Date = new DateTime(2026, 5, 10),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            },
+            new Transaction
+            {
+                Description = "Fuel",
+                Amount = 50m,
+                Date = new DateTime(2026, 5, 11),
+                Type = TransactionType.Expense,
+                CategoryId = 2
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var filter = new TransactionFilterDto
+        {
+            CategoryId = 1
+        };
+
+        // Act
+        var result = await service.GetAllAsync(filter);
+
+        // Assert
+        Assert.Single(result.Items);
+        Assert.Equal("Groceries", result.Items[0].Description);
+        Assert.Equal(1, result.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldFilterTransactionsByDateRange()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var category = new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense
+        };
+
+        context.Categories.Add(category);
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Old transaction",
+                Amount = 100m,
+                Date = new DateTime(2026, 4, 10),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            },
+            new Transaction
+            {
+                Description = "Current transaction",
+                Amount = 50m,
+                Date = new DateTime(2026, 5, 10),
+                Type = TransactionType.Expense,
+                CategoryId = 1
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context);
+
+        var filter = new TransactionFilterDto
+        {
+            FromDate = new DateTime(2026, 5, 1),
+            ToDate = new DateTime(2026, 5, 31)
+        };
+
+        // Act
+        var result = await service.GetAllAsync(filter);
+
+        // Assert
+        Assert.Single(result.Items);
+        Assert.Equal("Current transaction", result.Items[0].Description);
+        Assert.Equal(1, result.TotalCount);
+    }
 }
