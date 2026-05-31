@@ -191,4 +191,93 @@ public class UserServiceTests
         // Assert
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task LoginAsync_ShouldReturnUser_WhenCredentialsAreValid()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var user = new User
+        {
+            Name = "Antonio",
+            Email = "antonio@test.com"
+        };
+
+        var passwordHasher = new PasswordHasher<User>();
+        user.PasswordHash = passwordHasher.HashPassword(user, "123456");
+
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var service = new UserService(context);
+
+        var loginUserDto = new LoginUserDto
+        {
+            Email = "antonio@test.com",
+            Password = "123456"
+        };
+
+        // Act
+        var result = await service.LoginAsync(loginUserDto);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Antonio", result.Name);
+        Assert.Equal("antonio@test.com", result.Email);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ShouldReturnNull_WhenPasswordIsInvalid()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var user = new User
+        {
+            Name = "Antonio",
+            Email = "antonio@test.com"
+        };
+
+        var passwordHasher = new PasswordHasher<User>();
+        user.PasswordHash = passwordHasher.HashPassword(user, "123456");
+
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var service = new UserService(context);
+
+        var loginUserDto = new LoginUserDto
+        {
+            Email = "antonio@test.com",
+            Password = "wrong-password"
+        };
+
+        // Act
+        var result = await service.LoginAsync(loginUserDto);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ShouldReturnNull_WhenEmailDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new UserService(context);
+
+        var loginUserDto = new LoginUserDto
+        {
+            Email = "missing@test.com",
+            Password = "123456"
+        };
+
+        // Act
+        var result = await service.LoginAsync(loginUserDto);
+
+        // Assert
+        Assert.Null(result);
+    }
 }

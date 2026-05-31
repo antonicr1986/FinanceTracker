@@ -74,4 +74,32 @@ public class UserService : IUserService
             })
             .FirstOrDefaultAsync();
     }
+
+    public async Task<UserDto?> LoginAsync(LoginUserDto loginUserDto)
+    {
+        var user = await _context.Users
+            .FirstOrDefaultAsync(user => user.Email == loginUserDto.Email);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        var verificationResult = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            loginUserDto.Password);
+
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+
+        return new UserDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email
+        };
+    }
 }

@@ -43,4 +43,17 @@ public class UsersController : ControllerBase
 
         return Ok(user);
     }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<UserDto>> Login([FromBody] LoginUserDto loginUserDto)
+    {
+        var user = await _userService.LoginAsync(loginUserDto);
+
+        if (user is null)
+        {
+            return Unauthorized("Invalid email or password.");
+        }
+
+        return Ok(user);
+    }
 }
