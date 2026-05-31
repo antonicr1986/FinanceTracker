@@ -9,10 +9,12 @@ namespace FinanceTracker.Api.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly ITokenService _tokenService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, ITokenService tokenService)
     {
         _userService = userService;
+        _tokenService = tokenService;
     }
 
     [HttpPost("register")]
@@ -45,7 +47,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<ActionResult<UserDto>> Login([FromBody] LoginUserDto loginUserDto)
+    public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginUserDto loginUserDto)
     {
         var user = await _userService.LoginAsync(loginUserDto);
 
@@ -54,6 +56,8 @@ public class UsersController : ControllerBase
             return Unauthorized("Invalid email or password.");
         }
 
-        return Ok(user);
+        var response = _tokenService.CreateToken(user);
+
+        return Ok(response);
     }
 }
