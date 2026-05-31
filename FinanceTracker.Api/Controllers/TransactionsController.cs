@@ -2,9 +2,11 @@
 using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using FinanceTracker.Application.Common;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FinanceTracker.Api.Controllers;
 
+[Authorize]
 [Route("api/[controller]")]
 [ApiController]
 public class TransactionsController : ControllerBase
