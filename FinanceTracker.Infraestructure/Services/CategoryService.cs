@@ -15,28 +15,37 @@ namespace FinanceTracker.Infrastructure.Services;
 public class CategoryService : ICategoryService
 {
     private readonly AppDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CategoryService(AppDbContext context)
+    public CategoryService(AppDbContext context, ICurrentUserService currentUserService)
     {
         _context = context;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<CategoryDto>> GetAllAsync()
     {
+        var userId = GetCurrentUserId();
+
         return await _context.Categories
-            .Select(category => new CategoryDto
-            {
-                Id = category.Id,
-                Name = category.Name,
-                Type = category.Type
-            })
-            .ToListAsync();
+        .Where(category => category.UserId == userId)
+        .Select(category => new CategoryDto
+        {
+            Id = category.Id,
+            Name = category.Name,
+            Type = category.Type
+        })
+        .ToListAsync();
     }
 
     public async Task<CategoryDto?> GetByIdAsync(int id)
     {
+        var userId = GetCurrentUserId();
+
         return await _context.Categories
-            .Where(category => category.Id == id)
+            .Where(category =>
+                category.Id == id &&
+                category.UserId == userId)
             .Select(category => new CategoryDto
             {
                 Id = category.Id,
@@ -48,10 +57,13 @@ public class CategoryService : ICategoryService
 
     public async Task<CategoryDto> CreateAsync(CreateCategoryDto createCategoryDto)
     {
+        var userId = GetCurrentUserId();
+
         var category = new Category
         {
             Name = createCategoryDto.Name,
-            Type = createCategoryDto.Type
+            Type = createCategoryDto.Type,
+            UserId = userId
         };
 
         _context.Categories.Add(category);
@@ -67,7 +79,12 @@ public class CategoryService : ICategoryService
 
     public async Task<bool> UpdateAsync(int id, UpdateCategoryDto updateCategoryDto)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var userId = GetCurrentUserId();
+
+        var category = await _context.Categories
+            .FirstOrDefaultAsync(category =>
+                category.Id == id &&
+                category.UserId == userId);
 
         if (category is null)
         {
@@ -84,7 +101,12 @@ public class CategoryService : ICategoryService
 
     public async Task<DeleteCategoryResult> DeleteAsync(int id)
     {
-        var category = await _context.Categories.FindAsync(id);
+        var userId = GetCurrentUserId();
+
+        var category = await _context.Categories
+            .FirstOrDefaultAsync(category =>
+                category.Id == id &&
+                category.UserId == userId);
 
         if (category is null)
         {
@@ -92,7 +114,9 @@ public class CategoryService : ICategoryService
         }
 
         var hasTransactions = await _context.Transactions
-            .AnyAsync(transaction => transaction.CategoryId == id);
+            .AnyAsync(transaction =>
+                transaction.CategoryId == id &&
+                transaction.UserId == userId);
 
         if (hasTransactions)
         {
@@ -103,5 +127,11 @@ public class CategoryService : ICategoryService
         await _context.SaveChangesAsync();
 
         return DeleteCategoryResult.Success;
+    }
+
+    private int GetCurrentUserId()
+    {
+        return _currentUserService.UserId
+            ?? throw new UnauthorizedAccessException("Authenticated user not found.");
     }
 }

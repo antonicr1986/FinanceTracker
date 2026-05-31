@@ -1,3 +1,4 @@
+using FinanceTracker.Api.Services;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Infrastructure.Data;
 using FinanceTracker.Infrastructure.Services;
@@ -18,6 +19,8 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Add services to the container.
 builder.Services.AddControllers();
