@@ -161,4 +161,34 @@ public class UserServiceTests
         Assert.Equal("Antonio", result.Name);
         Assert.Equal("antonio@test.com", result.Email);
     }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReturnNull_WhenUserDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new UserService(context);
+
+        // Act
+        var result = await service.GetByIdAsync(999);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetByEmailAsync_ShouldReturnNull_WhenEmailDoesNotExist()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new UserService(context);
+
+        // Act
+        var result = await service.GetByEmailAsync("missing@test.com");
+
+        // Assert
+        Assert.Null(result);
+    }
 }
