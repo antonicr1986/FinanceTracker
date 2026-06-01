@@ -16,19 +16,25 @@ namespace FinanceTracker.Infrastructure.Services;
 public class TransactionService : ITransactionService
 {
     private readonly AppDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
 
-    public TransactionService(AppDbContext context)
+    public TransactionService(
+        AppDbContext context,
+        ICurrentUserService currentUserService)
     {
         _context = context;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PagedResult<TransactionDto>> GetAllAsync(TransactionFilterDto filter)
     {
+        var userId = GetCurrentUserId();
         var pageNumber = filter.PageNumber < 1 ? 1 : filter.PageNumber;
         var pageSize = filter.PageSize < 1 ? 10 : filter.PageSize;
 
         var query = _context.Transactions
             .Include(transaction => transaction.Category)
+            .Where(transaction => transaction.UserId == userId)
             .AsQueryable();
 
         if (filter.Type.HasValue)
@@ -81,9 +87,13 @@ public class TransactionService : ITransactionService
 
     public async Task<TransactionDto?> GetByIdAsync(int id)
     {
+        var userId = GetCurrentUserId();
+
         return await _context.Transactions
             .Include(transaction => transaction.Category)
-            .Where(transaction => transaction.Id == id)
+            .Where(transaction =>
+                transaction.Id == id &&
+                transaction.UserId == userId)
             .Select(transaction => new TransactionDto
             {
                 Id = transaction.Id,
@@ -99,8 +109,10 @@ public class TransactionService : ITransactionService
 
     public async Task<CreateTransactionServiceResult> CreateAsync(CreateTransactionDto createTransactionDto)
     {
+        var userId = GetCurrentUserId();
+
         var category = await _context.Categories
-            .FirstOrDefaultAsync(category => category.Id == createTransactionDto.CategoryId);
+             .FirstOrDefaultAsync(category => category.Id == createTransactionDto.CategoryId && category.UserId == userId);
 
         if (category is null)
         {
@@ -124,7 +136,8 @@ public class TransactionService : ITransactionService
             Amount = createTransactionDto.Amount,
             Date = createTransactionDto.Date,
             Type = createTransactionDto.Type,
-            CategoryId = createTransactionDto.CategoryId
+            CategoryId = createTransactionDto.CategoryId,
+            UserId = userId
         };
 
         _context.Transactions.Add(transaction);
@@ -139,15 +152,16 @@ public class TransactionService : ITransactionService
 
     public async Task<UpdateTransactionResult> UpdateAsync(int id, UpdateTransactionDto updateTransactionDto)
     {
-        var transaction = await _context.Transactions.FindAsync(id);
+        var userId = GetCurrentUserId();
+
+        var transaction = await _context.Transactions.FirstOrDefaultAsync(transaction => transaction.Id == id && transaction.UserId == userId);
 
         if (transaction is null)
         {
             return UpdateTransactionResult.TransactionNotFound;
         }
 
-        var category = await _context.Categories
-            .FirstOrDefaultAsync(category => category.Id == updateTransactionDto.CategoryId);
+        var category = await _context.Categories.FirstOrDefaultAsync(category => category.Id == updateTransactionDto.CategoryId && category.UserId == userId);
 
         if (category is null)
         {
@@ -172,7 +186,9 @@ public class TransactionService : ITransactionService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var transaction = await _context.Transactions.FindAsync(id);
+        var userId = GetCurrentUserId();
+
+        var transaction = await _context.Transactions.FirstOrDefaultAsync(transaction => transaction.Id == id && transaction.UserId == userId);
 
         if (transaction is null)
         {
@@ -187,7 +203,9 @@ public class TransactionService : ITransactionService
 
     public async Task<TransactionSummaryDto> GetSummaryAsync(TransactionFilterDto filter)
     {
-        var query = _context.Transactions.AsQueryable();
+        var userId = GetCurrentUserId();
+
+        var query = _context.Transactions.Where(transaction => transaction.UserId == userId).AsQueryable();
 
         if (filter.Type.HasValue)
         {
@@ -223,5 +241,11 @@ public class TransactionService : ITransactionService
             TotalExpense = totalExpense,
             Balance = totalIncome - totalExpense
         };
+    }
+
+    private int GetCurrentUserId()
+    {
+        return _currentUserService.UserId
+            ?? throw new UnauthorizedAccessException("Authenticated user not found.");
     }
 }

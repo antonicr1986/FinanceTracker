@@ -1,5 +1,6 @@
 ﻿using FinanceTracker.Application.Common;
 using FinanceTracker.Application.DTOs.Transactions;
+using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Domain.Enums;
 using FinanceTracker.Infrastructure.Data;
@@ -19,6 +20,16 @@ public class TransactionServiceTests
         return new AppDbContext(options);
     }
 
+    private class TestCurrentUserService : ICurrentUserService
+    {
+        public int? UserId { get; }
+
+        public TestCurrentUserService(int? userId)
+        {
+            UserId = userId;
+        }
+    }
+
     [Fact]
     public async Task GetSummaryAsync_ShouldReturnCorrectTotals()
     {
@@ -29,7 +40,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Salary",
-            Type = TransactionType.Income
+            Type = TransactionType.Income,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -41,7 +53,8 @@ public class TransactionServiceTests
                 Amount = 2000m,
                 Date = new DateTime(2026, 5, 1),
                 Type = TransactionType.Income,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -49,7 +62,8 @@ public class TransactionServiceTests
                 Amount = 150m,
                 Date = new DateTime(2026, 5, 2),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -57,13 +71,14 @@ public class TransactionServiceTests
                 Amount = 50m,
                 Date = new DateTime(2026, 5, 3),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var filter = new TransactionFilterDto();
 
@@ -86,7 +101,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "General",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -98,7 +114,8 @@ public class TransactionServiceTests
                 Amount = 2000m,
                 Date = new DateTime(2026, 5, 1),
                 Type = TransactionType.Income,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -106,13 +123,14 @@ public class TransactionServiceTests
                 Amount = 150m,
                 Date = new DateTime(2026, 5, 2),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var filter = new TransactionFilterDto
         {
@@ -136,7 +154,7 @@ public class TransactionServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var createTransactionDto = new CreateTransactionDto
         {
@@ -165,7 +183,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "General",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -177,7 +196,8 @@ public class TransactionServiceTests
                 Amount = 10m,
                 Date = new DateTime(2026, 5, 1),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -185,13 +205,14 @@ public class TransactionServiceTests
                 Amount = 20m,
                 Date = new DateTime(2026, 5, 20),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var filter = new TransactionFilterDto
         {
@@ -221,13 +242,14 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var createTransactionDto = new CreateTransactionDto
         {
@@ -261,7 +283,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Transport",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -272,13 +295,14 @@ public class TransactionServiceTests
             Amount = 50m,
             Date = new DateTime(2026, 5, 3),
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Transactions.Add(transaction);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetByIdAsync(transaction.Id);
@@ -297,7 +321,7 @@ public class TransactionServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetByIdAsync(999);
@@ -316,7 +340,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Salary",
-            Type = TransactionType.Income
+            Type = TransactionType.Income,
+            UserId = 1
         };
 
         var transaction = new Transaction
@@ -325,14 +350,15 @@ public class TransactionServiceTests
             Amount = 100m,
             Date = new DateTime(2026, 5, 23),
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Categories.Add(category);
         context.Transactions.Add(transaction);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var updateTransactionDto = new UpdateTransactionDto
         {
@@ -360,13 +386,14 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Salary",
-            Type = TransactionType.Income
+            Type = TransactionType.Income,
+            UserId = 1
         };
 
         context.Categories.Add(category);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var createTransactionDto = new CreateTransactionDto
         {
@@ -395,7 +422,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -406,13 +434,14 @@ public class TransactionServiceTests
             Amount = 100m,
             Date = new DateTime(2026, 5, 10),
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Transactions.Add(transaction);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var updateTransactionDto = new UpdateTransactionDto
         {
@@ -442,7 +471,7 @@ public class TransactionServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var updateTransactionDto = new UpdateTransactionDto
         {
@@ -472,13 +501,14 @@ public class TransactionServiceTests
             Amount = 100m,
             Date = new DateTime(2026, 5, 10),
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Transactions.Add(transaction);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var updateTransactionDto = new UpdateTransactionDto
         {
@@ -508,13 +538,14 @@ public class TransactionServiceTests
             Amount = 100m,
             Date = new DateTime(2026, 5, 10),
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Transactions.Add(transaction);
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.DeleteAsync(transaction.Id);
@@ -532,7 +563,7 @@ public class TransactionServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.DeleteAsync(999);
@@ -551,14 +582,16 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         var transportCategory = new Category
         {
             Id = 2,
             Name = "Transport",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.AddRange(foodCategory, transportCategory);
@@ -570,7 +603,8 @@ public class TransactionServiceTests
                 Amount = 100m,
                 Date = new DateTime(2026, 5, 10),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -578,13 +612,14 @@ public class TransactionServiceTests
                 Amount = 50m,
                 Date = new DateTime(2026, 5, 11),
                 Type = TransactionType.Expense,
-                CategoryId = 2
+                CategoryId = 2,
+                UserId = 1
             }
         );
 
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var filter = new TransactionFilterDto
         {
@@ -610,7 +645,8 @@ public class TransactionServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -622,7 +658,8 @@ public class TransactionServiceTests
                 Amount = 100m,
                 Date = new DateTime(2026, 4, 10),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -630,13 +667,14 @@ public class TransactionServiceTests
                 Amount = 50m,
                 Date = new DateTime(2026, 5, 10),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
         await context.SaveChangesAsync();
 
-        var service = new TransactionService(context);
+        var service = new TransactionService(context, new TestCurrentUserService(1));
 
         var filter = new TransactionFilterDto
         {
