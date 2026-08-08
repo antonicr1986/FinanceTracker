@@ -243,8 +243,6 @@ Test coverage currently includes:
 
 ## 📌 Project Status
 
-Current status: MVP in progress.
-
 Implemented:
 
 - Layered solution structure
@@ -285,6 +283,6 @@ Planned improvements:
 
 ## 🎯 Purpose
 
-This project is part of my portfolio as a junior .NET developer.
+This project is part of my portfolio as a .NET developer.
 
 It is intended to demonstrate clean project structure, backend API development, Entity Framework Core usage, validation, testing and GitHub workflow.
