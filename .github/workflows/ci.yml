@@ -18,10 +18,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore
-        run: dotnet restore FinanceTracker.Api/FinanceTracker.Api.csproj
+        run: dotnet restore FinanceTracker.sln
 
       - name: Build
-        run: dotnet build FinanceTracker.Api/FinanceTracker.Api.csproj --no-restore --configuration Release
+        run: dotnet build FinanceTracker.sln --no-restore --configuration Release
 
       - name: Test
         run: dotnet test FinanceTracker.Tests/FinanceTracker.Tests.csproj --no-restore
