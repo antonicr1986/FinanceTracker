@@ -1,5 +1,7 @@
 # 💰 FinanceTracker
 
+![CI](https://github.com/antonicr1986/FinanceTracker/actions/workflows/ci.yml/badge.svg)
+
 FinanceTracker is a personal finance tracking API built with .NET 8, Entity Framework Core and SQL Server LocalDB.
 
 The goal of this project is to practice and demonstrate backend development skills using a layered architecture, DTOs, services, validation, Entity Framework Core and automated tests.
@@ -42,6 +44,9 @@ The goal of this project is to practice and demonstrate backend development skil
 - EF Core InMemory
 - Swagger / OpenAPI
 - Git / GitHub
+- GitHub Actions (CI/CD)
+- Docker / Docker Compose
+
 
 ## 🧱 Architecture
 
@@ -222,6 +227,44 @@ Swagger will be available at:
 
 https://localhost:{port}/swagger
 
+## 🐳 Running with Docker
+
+The project can also run fully containerized (API + SQL Server) using Docker Compose.
+
+### ✅ Prerequisites
+
+- Docker Desktop
+
+### 🔐 Environment variables
+
+Create a `.env` file in the root of the project (it is git-ignored and never committed) with:
+
+MSSQL_SA_PASSWORD=YourStrongPassword123!
+JWT_KEY=your-generated-jwt-key
+
+### ▶️ Run
+
+docker compose up --build
+
+This starts two containers:
+
+- `api` — the FinanceTracker API, available at `http://localhost:8080`
+- `db` — SQL Server 2022, available on port `1433`
+
+Swagger will be available at:
+
+http://localhost:8080/swagger
+
+## ⚙️ CI/CD
+
+This project uses GitHub Actions for continuous integration. On every push and pull request to `master`, the pipeline automatically:
+
+- Restores and builds the solution
+- Runs the automated test suite
+- Builds the Docker image to validate the container still builds correctly
+
+Workflow file: `.github/workflows/ci.yml`
+
 ## 🧪 Running Tests
 
 Tests can be executed from Visual Studio Test Explorer or with:
@@ -270,6 +313,8 @@ Implemented:
   - Categories with associated transactions cannot be deleted
 - Swagger / OpenAPI testing
 - Automated tests with xUnit and EF Core InMemory
+- Dockerized application (API + SQL Server via Docker Compose)
+- CI/CD pipeline with GitHub Actions (build, test, Docker image)
 
 Planned improvements:
 
@@ -280,6 +325,7 @@ Planned improvements:
 - Global error handling
 - Improved Swagger documentation
 - Deployment guide
+- Kubernetes deployment
 
 ## 🎯 Purpose
 
