@@ -3,6 +3,7 @@
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-2022-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)
+[![Container](https://img.shields.io/badge/ghcr.io-financetracker-24292E?style=for-the-badge&logo=github&logoColor=white)](https://github.com/antonicr1986/FinanceTracker/pkgs/container/financetracker)
 
 FinanceTracker is a personal finance tracking API built with .NET 8, Entity Framework Core and SQL Server LocalDB.
 
@@ -10,6 +11,8 @@ The goal of this project is to practice and demonstrate backend development skil
 
 ## ✨ Features
 
+- User registration and login with JWT authentication
+- All finance endpoints require a valid bearer token
 - Manage income and expense categories
 - Manage financial transactions
 - Manage monthly budgets
@@ -42,12 +45,14 @@ The goal of this project is to practice and demonstrate backend development skil
 - ASP.NET Core Web API
 - Entity Framework Core
 - SQL Server LocalDB
+- JWT authentication (bearer tokens)
 - xUnit
 - EF Core InMemory
 - Swagger / OpenAPI
 - Git / GitHub
 - GitHub Actions (CI/CD)
 - Docker / Docker Compose
+- GitHub Container Registry (GHCR)
 
 
 ## 🧱 Architecture
@@ -221,6 +226,9 @@ Or using the .NET CLI:
 
 dotnet ef database update
 
+When the API runs in a container it applies any pending migrations automatically
+at startup, so a fresh SQL Server instance is set up without any manual step.
+
 ## ▶️ Running the API
 
 Set `FinanceTracker.Api` as the startup project and run the application.
@@ -257,13 +265,45 @@ Swagger will be available at:
 
 http://localhost:8080/swagger
 
+## 📦 Running from the published image
+
+Every push to `master` publishes a container image to GitHub Container Registry, so the
+application can be run without cloning the repository or building anything.
+
+docker pull ghcr.io/antonicr1986/financetracker:latest
+
+`docker-compose.prod.yml` starts the published image alongside SQL Server:
+
+docker compose -f docker-compose.prod.yml up -d
+
+Unlike the development compose file, this one:
+
+- Pulls the image instead of building from source
+- Keeps the database in a named volume, so data survives a restart
+- Waits for a SQL Server health check before starting the API
+- Does not expose port 1433 to the host
+
+To deploy a specific commit rather than the latest build:
+
+IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
+
 ## ⚙️ CI/CD
 
-This project uses GitHub Actions for continuous integration. On every push and pull request to `master`, the pipeline automatically:
+This project uses GitHub Actions. On every push and pull request to `master`, the
+pipeline automatically:
 
 - Restores and builds the solution
 - Runs the automated test suite
-- Builds the Docker image to validate the container still builds correctly
+- Builds the Docker image
+
+On pushes to `master` it additionally:
+
+- Publishes the image to GitHub Container Registry
+- Tags it with the full commit SHA and with `latest`
+
+Pull requests build the image to validate the Dockerfile, but never publish. Because
+every build is tagged by commit SHA, any previous version can be redeployed as-is,
+which makes rollbacks a one-line change.
 
 Workflow file: `.github/workflows/ci.yml`
 
@@ -273,7 +313,7 @@ Tests can be executed from Visual Studio Test Explorer or with:
 
 dotnet test
 
-Current automated tests: 33 passing tests.
+Current automated tests: 43 passing tests.
 
 Test coverage currently includes:
 
@@ -315,18 +355,22 @@ Implemented:
   - Categories with associated transactions cannot be deleted
 - Swagger / OpenAPI testing
 - Automated tests with xUnit and EF Core InMemory
+- JWT authentication (register and login)
+- Migrations applied automatically on startup
 - Dockerized application (API + SQL Server via Docker Compose)
-- CI/CD pipeline with GitHub Actions (build, test, Docker image)
+- CI/CD pipeline with GitHub Actions (build, test, publish)
+- Container image published to GHCR, tagged by commit SHA
+- Production compose file with health checks and a persistent database volume
 
 Planned improvements:
 
-- Authentication
-- User-based finance tracking
+- User-scoped finance data
 - More advanced budget reports
 - Controller tests
 - Global error handling
-- Improved Swagger documentation
-- Deployment guide
+- Health check endpoint and structured logging
+- Vulnerability scanning in the pipeline
+- Automated deployment to a hosted environment
 - Kubernetes deployment
 
 ## 🎯 Purpose
