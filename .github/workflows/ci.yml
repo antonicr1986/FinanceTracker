@@ -3,8 +3,20 @@ name: CI
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
   pull_request:
     branches: [master]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+  # Permite lanzar el pipeline a mano desde la pestana Actions
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
