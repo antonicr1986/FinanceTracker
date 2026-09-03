@@ -377,4 +377,4 @@ Planned improvements:
 
 This project is part of my portfolio as a .NET developer.
 
-It is intended to demonstrate clean project structure, backend API development, Entity Framework Core usage, validation, testing and GitHub workflow.
+It is intended to demonstrate clean project structure, backend API development, Entity Framework Core usage, validation, testing and GitHub workflows.
