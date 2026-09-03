@@ -1,0 +1,38 @@
+# Levanta FinanceTracker desde la imagen ya publicada en GHCR.
+# No necesita el codigo fuente: solo este fichero y un .env
+#
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# Para desplegar un commit concreto en lugar de la ultima:
+#   IMAGE_TAG=sha-2b96876... docker compose -f docker-compose.prod.yml up -d
+
+services:
+  api:
+    image: ghcr.io/antonicr1986/financetracker:${IMAGE_TAG:-latest}
+    ports:
+      - "8080:8080"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Database=FinanceTrackerDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True
+      - Jwt__Key=${JWT_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+    volumes:
+      - mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mssql-data:

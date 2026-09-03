@@ -89,12 +89,18 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Aplica las migraciones pendientes al arrancar. Esto hace que la imagen sea
+// autosuficiente: contra un SQL Server vacio, la base de datos queda lista sola.
+// Con varias replicas habria que mover esto a un paso propio del pipeline.
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
 }
+
+// Swagger siempre activo: es la superficie de demo de este proyecto.
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
