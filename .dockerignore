@@ -1,0 +1,31 @@
+# Resultados de compilacion. Se generan DENTRO de la imagen.
+# Si se copian desde Windows, traen ficheros con rutas como
+# C:\Program Files (x86)\... que no existen en Linux y rompen el build.
+**/bin/
+**/obj/
+
+# Control de versiones
+.git/
+.gitignore
+.gitattributes
+.github/
+.gitleaks.toml
+.gitleaksignore
+
+# Ficheros del IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Secretos: docker compose lee el .env desde la maquina,
+# no debe acabar dentro de la imagen
+.env
+*.env
+
+# No aportan nada al contenedor
+*.md
+screenshots/
+Dockerfile
+.dockerignore
+docker-compose*.yml
