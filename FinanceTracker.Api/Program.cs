@@ -1,8 +1,10 @@
+﻿using FinanceTracker.Api.HealthChecks;
 using FinanceTracker.Api.Services;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Infrastructure.Data;
 using FinanceTracker.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -87,6 +89,11 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// La comprobacion de base de datos se etiqueta como "ready": asi /health
+// (liveness) puede excluirla y /health/ready (readiness) incluirla.
+builder.Services.AddHealthChecks()
+    .AddCheck<DatabaseHealthCheck>("database", tags: new[] { "ready" });
+
 var app = builder.Build();
 
 // Aplica las migraciones pendientes al arrancar. Esto hace que la imagen sea
@@ -106,6 +113,22 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Liveness: "el proceso esta vivo y responde". Predicate => false hace que
+// NO ejecute ninguna comprobacion. Es deliberado: si esto fallara porque la
+// base de datos esta caida, la plataforma reiniciaria la API sin motivo.
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => false
+});
+
+// Readiness: "puedo atender peticiones de verdad". Aqui si se comprueba la
+// base de datos. Si falla, la plataforma deja de enviar trafico a esta
+// instancia, pero no la reinicia.
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready")
+});
 
 app.MapControllers();
 
