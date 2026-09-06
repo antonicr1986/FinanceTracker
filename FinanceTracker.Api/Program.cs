@@ -1,4 +1,5 @@
 ﻿using FinanceTracker.Api.HealthChecks;
+using FinanceTracker.Api.Middleware;
 using FinanceTracker.Api.Services;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Infrastructure.Data;
@@ -8,9 +9,18 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Serilog sustituye al sistema de logs por defecto. Su configuracion vive en
+// appsettings.json, no aqui: asi se puede cambiar el nivel o el destino sin
+// recompilar ni volver a desplegar.
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -89,6 +99,9 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 // La comprobacion de base de datos se etiqueta como "ready": asi /health
 // (liveness) puede excluirla y /health/ready (readiness) incluirla.
 builder.Services.AddHealthChecks()
@@ -105,11 +118,23 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
+// El manejador de excepciones va el primero: envuelve a todo lo que viene
+// detras, asi ningun error se escapa sin quedar registrado.
+app.UseExceptionHandler();
+
+// Una linea por peticion: metodo, ruta, codigo de estado y duracion.
+app.UseSerilogRequestLogging();
+
 // Swagger siempre activo: es la superficie de demo de este proyecto.
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
+// Sin UseHttpsRedirection a proposito. Dentro de un contenedor solo se
+// escucha en HTTP: el cifrado lo termina la plataforma (ingress, proxy o
+// balanceador) antes de llegar aqui. Dejarlo activo no anadia seguridad y si
+// causaba problemas: emitia un aviso en cada arranque y, si llegara a
+// activarse, respondaria 307 a las comprobaciones de /health que la
+// plataforma hace por HTTP, marcando la aplicacion como caida.
 
 app.UseAuthentication();
 app.UseAuthorization();
