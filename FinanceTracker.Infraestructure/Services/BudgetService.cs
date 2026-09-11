@@ -10,16 +10,21 @@ namespace FinanceTracker.Infrastructure.Services;
 public class BudgetService : IBudgetService
 {
     private readonly AppDbContext _context;
+    private readonly ICurrentUserService _currentUserService;
 
-    public BudgetService(AppDbContext context)
+    public BudgetService(AppDbContext context,ICurrentUserService currentUserService)
     {
         _context = context;
+        _currentUserService = currentUserService;
     }
 
     public async Task<List<BudgetDto>> GetAllAsync()
     {
+        var userId = GetCurrentUserId();
+
         var budgets = await _context.Budgets
             .Include(budget => budget.Category)
+            .Where(budget => budget.UserId == userId)
             .OrderByDescending(budget => budget.Year)
             .ThenByDescending(budget => budget.Month)
             .ToListAsync();
@@ -30,6 +35,7 @@ public class BudgetService : IBudgetService
         {
             var spentAmount = await _context.Transactions
                 .Where(transaction =>
+                    transaction.UserId == userId &&
                     transaction.Type == budget.Type &&
                     transaction.Date.Month == budget.Month &&
                     transaction.Date.Year == budget.Year &&
@@ -59,9 +65,13 @@ public class BudgetService : IBudgetService
 
     public async Task<BudgetDto?> GetByIdAsync(int id)
     {
+        var userId = GetCurrentUserId();
+
         var budget = await _context.Budgets
             .Include(budget => budget.Category)
-            .FirstOrDefaultAsync(budget => budget.Id == id);
+            .FirstOrDefaultAsync(budget =>
+                budget.Id == id &&
+                budget.UserId == userId);
 
         if (budget is null)
         {
@@ -70,6 +80,7 @@ public class BudgetService : IBudgetService
 
         var spentAmount = await _context.Transactions
             .Where(transaction =>
+                transaction.UserId == userId &&
                 transaction.Type == budget.Type &&
                 transaction.Date.Month == budget.Month &&
                 transaction.Date.Year == budget.Year &&
@@ -96,11 +107,14 @@ public class BudgetService : IBudgetService
 
     public async Task<CreateBudgetServiceResult> CreateAsync(CreateBudgetDto createBudgetDto)
     {
+        var userId = GetCurrentUserId();
+
         if (createBudgetDto.CategoryId.HasValue)
         {
             var category = await _context.Categories
-                .FirstOrDefaultAsync(category => category.Id == createBudgetDto.CategoryId.Value);
-
+                .FirstOrDefaultAsync(category =>
+                    category.Id == createBudgetDto.CategoryId.Value &&
+                    category.UserId == userId);
             if (category is null)
             {
                 return new CreateBudgetServiceResult
@@ -125,7 +139,8 @@ public class BudgetService : IBudgetService
             Month = createBudgetDto.Month,
             Year = createBudgetDto.Year,
             Type = createBudgetDto.Type,
-            CategoryId = createBudgetDto.CategoryId
+            CategoryId = createBudgetDto.CategoryId,
+            UserId = userId
         };
 
         _context.Budgets.Add(budget);
@@ -140,7 +155,12 @@ public class BudgetService : IBudgetService
 
     public async Task<BudgetOperationResult> UpdateAsync(int id, UpdateBudgetDto updateBudgetDto)
     {
-        var budget = await _context.Budgets.FindAsync(id);
+        var userId = GetCurrentUserId();
+
+        var budget = await _context.Budgets
+             .FirstOrDefaultAsync(budget =>
+                 budget.Id == id &&
+                 budget.UserId == userId);
 
         if (budget is null)
         {
@@ -150,7 +170,9 @@ public class BudgetService : IBudgetService
         if (updateBudgetDto.CategoryId.HasValue)
         {
             var category = await _context.Categories
-                .FirstOrDefaultAsync(category => category.Id == updateBudgetDto.CategoryId.Value);
+             .FirstOrDefaultAsync(category =>
+                 category.Id == updateBudgetDto.CategoryId.Value &&
+                 category.UserId == userId);
 
             if (category is null)
             {
@@ -177,7 +199,12 @@ public class BudgetService : IBudgetService
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var budget = await _context.Budgets.FindAsync(id);
+        var userId = GetCurrentUserId();
+
+        var budget = await _context.Budgets
+            .FirstOrDefaultAsync(budget =>
+                budget.Id == id &&
+                budget.UserId == userId);
 
         if (budget is null)
         {
@@ -188,5 +215,10 @@ public class BudgetService : IBudgetService
         await _context.SaveChangesAsync();
 
         return true;
+    }
+    private int GetCurrentUserId()
+    {
+        return _currentUserService.UserId
+            ?? throw new UnauthorizedAccessException("Authenticated user not found.");
     }
 }

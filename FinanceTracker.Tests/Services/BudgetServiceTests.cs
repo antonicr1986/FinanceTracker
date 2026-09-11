@@ -1,5 +1,6 @@
 ﻿using FinanceTracker.Application.Common;
 using FinanceTracker.Application.DTOs.Budgets;
+using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Domain.Enums;
 using FinanceTracker.Infrastructure.Data;
@@ -19,6 +20,16 @@ public class BudgetServiceTests
         return new AppDbContext(options);
     }
 
+    private class TestCurrentUserService : ICurrentUserService
+    {
+        public int? UserId { get; }
+
+        public TestCurrentUserService(int? userId)
+        {
+            UserId = userId;
+        }
+    }
+
     [Fact]
     public async Task CreateAsync_ShouldCreateBudget_WhenCategoryExists()
     {
@@ -35,8 +46,7 @@ public class BudgetServiceTests
         context.Categories.Add(category);
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
-
+        var service = new BudgetService(context, new TestCurrentUserService(1));
         var createBudgetDto = new CreateBudgetDto
         {
             Name = "Food budget May",
@@ -68,7 +78,7 @@ public class BudgetServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         var createBudgetDto = new CreateBudgetDto
         {
@@ -126,7 +136,7 @@ public class BudgetServiceTests
 
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetAllAsync();
@@ -165,7 +175,7 @@ public class BudgetServiceTests
         context.Budgets.Add(budget);
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetByIdAsync(budget.Id);
@@ -205,7 +215,7 @@ public class BudgetServiceTests
         context.Budgets.Add(budget);
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         var updateBudgetDto = new UpdateBudgetDto
         {
@@ -249,7 +259,7 @@ public class BudgetServiceTests
         context.Budgets.Add(budget);
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.DeleteAsync(budget.Id);
@@ -289,7 +299,7 @@ public class BudgetServiceTests
         context.Budgets.Add(budget);
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         var updateBudgetDto = new UpdateBudgetDto
         {
@@ -324,7 +334,7 @@ public class BudgetServiceTests
         context.Categories.Add(category);
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         var createBudgetDto = new CreateBudgetDto
         {
@@ -392,7 +402,7 @@ public class BudgetServiceTests
 
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetByIdAsync(budget.Id);
@@ -450,7 +460,7 @@ public class BudgetServiceTests
 
         await context.SaveChangesAsync();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetAllAsync();
@@ -468,7 +478,7 @@ public class BudgetServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.GetByIdAsync(999);
@@ -483,7 +493,7 @@ public class BudgetServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         var updateBudgetDto = new UpdateBudgetDto
         {
@@ -508,7 +518,7 @@ public class BudgetServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new BudgetService(context);
+        var service = new BudgetService(context, new TestCurrentUserService(1));
 
         // Act
         var result = await service.DeleteAsync(999);
