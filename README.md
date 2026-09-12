@@ -9,6 +9,10 @@ FinanceTracker is a personal finance tracking API built with .NET 8, Entity Fram
 
 The goal of this project is to practice and demonstrate backend development skills using a layered architecture, DTOs, services, validation, Entity Framework Core and automated tests.
 
+**Web client:** this API has a Next.js and TypeScript front end at
+[financetracker-web](https://github.com/antonicr1986/financetracker-web),
+deployed at **[financetracker-web.vercel.app](https://financetracker-web.vercel.app)**.
+
 ## ✨ Features
 
 - User registration and login with JWT authentication
