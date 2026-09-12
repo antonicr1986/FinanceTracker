@@ -743,7 +743,7 @@ public class TransactionServiceTests
                 Amount = 2000m,
                 Date = new DateTime(2026, 5, 1),
                 Type = TransactionType.Income,
-                CategoryId = null,
+                CategoryId = 1,
                 UserId = 1
             },
             new Transaction
@@ -752,7 +752,7 @@ public class TransactionServiceTests
                 Amount = 150m,
                 Date = new DateTime(2026, 5, 2),
                 Type = TransactionType.Expense,
-                CategoryId = null,
+                CategoryId = 1,
                 UserId = 1
             }
         );
@@ -784,7 +784,7 @@ public class TransactionServiceTests
             Amount = 50m,
             Date = new DateTime(2026, 5, 3),
             Type = TransactionType.Expense,
-            CategoryId = null,
+            CategoryId = 1,
             UserId = 1
         };
 
@@ -812,7 +812,7 @@ public class TransactionServiceTests
             Amount = 100m,
             Date = new DateTime(2026, 5, 10),
             Type = TransactionType.Expense,
-            CategoryId = null,
+            CategoryId = 1,
             UserId = 1
         };
 
