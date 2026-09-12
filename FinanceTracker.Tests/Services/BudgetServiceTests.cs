@@ -40,7 +40,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -108,7 +109,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -121,7 +123,8 @@ public class BudgetServiceTests
                 Month = 5,
                 Year = 2026,
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Budget
             {
@@ -130,7 +133,8 @@ public class BudgetServiceTests
                 Month = 6,
                 Year = 2026,
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
@@ -157,7 +161,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -169,7 +174,8 @@ public class BudgetServiceTests
             Month = 5,
             Year = 2026,
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Budgets.Add(budget);
@@ -197,7 +203,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -209,7 +216,8 @@ public class BudgetServiceTests
             Month = 5,
             Year = 2026,
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Budgets.Add(budget);
@@ -253,7 +261,8 @@ public class BudgetServiceTests
             Month = 5,
             Year = 2026,
             Type = TransactionType.Expense,
-            CategoryId = null
+            CategoryId = null,
+            UserId = 1
         };
 
         context.Budgets.Add(budget);
@@ -281,7 +290,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Salary",
-            Type = TransactionType.Income
+            Type = TransactionType.Income,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -293,7 +303,8 @@ public class BudgetServiceTests
             Month = 5,
             Year = 2026,
             Type = TransactionType.Expense,
-            CategoryId = null
+            CategoryId = null,
+            UserId = 1
         };
 
         context.Budgets.Add(budget);
@@ -328,7 +339,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Salary",
-            Type = TransactionType.Income
+            Type = TransactionType.Income,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -364,7 +376,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -376,7 +389,8 @@ public class BudgetServiceTests
             Month = 5,
             Year = 2026,
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         };
 
         context.Budgets.Add(budget);
@@ -388,7 +402,8 @@ public class BudgetServiceTests
                 Amount = 100m,
                 Date = new DateTime(2026, 5, 10),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -396,7 +411,8 @@ public class BudgetServiceTests
                 Amount = 50m,
                 Date = new DateTime(2026, 5, 12),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
@@ -424,7 +440,8 @@ public class BudgetServiceTests
         {
             Id = 1,
             Name = "Food",
-            Type = TransactionType.Expense
+            Type = TransactionType.Expense,
+            UserId = 1
         };
 
         context.Categories.Add(category);
@@ -436,7 +453,8 @@ public class BudgetServiceTests
             Month = 5,
             Year = 2026,
             Type = TransactionType.Expense,
-            CategoryId = 1
+            CategoryId = 1,
+            UserId = 1
         });
 
         context.Transactions.AddRange(
@@ -446,7 +464,8 @@ public class BudgetServiceTests
                 Amount = 100m,
                 Date = new DateTime(2026, 5, 10),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             },
             new Transaction
             {
@@ -454,7 +473,8 @@ public class BudgetServiceTests
                 Amount = 50m,
                 Date = new DateTime(2026, 5, 12),
                 Type = TransactionType.Expense,
-                CategoryId = 1
+                CategoryId = 1,
+                UserId = 1
             }
         );
 
