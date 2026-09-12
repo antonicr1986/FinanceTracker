@@ -690,4 +690,145 @@ public class TransactionServiceTests
         Assert.Equal("Current transaction", result.Items[0].Description);
         Assert.Equal(1, result.TotalCount);
     }
+
+        [Fact]
+    public async Task GetAllAsync_ShouldNotReturnTransactions_OfAnotherUser()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        context.Categories.Add(new Category
+        {
+            Id = 1,
+            Name = "Food",
+            Type = TransactionType.Expense,
+            UserId = 1
+        });
+
+        context.Transactions.Add(new Transaction
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 10),
+            Type = TransactionType.Expense,
+            CategoryId = 1,
+            UserId = 1
+        });
+
+        await context.SaveChangesAsync();
+
+        // El servicio actua como el usuario 2
+        var service = new TransactionService(context, new TestCurrentUserService(2));
+
+        var filter = new TransactionFilterDto();
+
+        // Act
+        var result = await service.GetAllAsync(filter);
+
+        // Assert
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetSummaryAsync_ShouldNotIncludeTransactions_OfAnotherUser()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        context.Transactions.AddRange(
+            new Transaction
+            {
+                Description = "Monthly salary",
+                Amount = 2000m,
+                Date = new DateTime(2026, 5, 1),
+                Type = TransactionType.Income,
+                CategoryId = null,
+                UserId = 1
+            },
+            new Transaction
+            {
+                Description = "Groceries",
+                Amount = 150m,
+                Date = new DateTime(2026, 5, 2),
+                Type = TransactionType.Expense,
+                CategoryId = null,
+                UserId = 1
+            }
+        );
+
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context, new TestCurrentUserService(2));
+
+        var filter = new TransactionFilterDto();
+
+        // Act
+        var result = await service.GetSummaryAsync(filter);
+
+        // Assert
+        Assert.Equal(0m, result.TotalIncome);
+        Assert.Equal(0m, result.TotalExpense);
+        Assert.Equal(0m, result.Balance);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ShouldReturnNull_WhenTransactionBelongsToAnotherUser()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var transaction = new Transaction
+        {
+            Description = "Fuel",
+            Amount = 50m,
+            Date = new DateTime(2026, 5, 3),
+            Type = TransactionType.Expense,
+            CategoryId = null,
+            UserId = 1
+        };
+
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context, new TestCurrentUserService(2));
+
+        // Act
+        var result = await service.GetByIdAsync(transaction.Id);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ShouldNotDeleteTransaction_OfAnotherUser()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var transaction = new Transaction
+        {
+            Description = "Groceries",
+            Amount = 100m,
+            Date = new DateTime(2026, 5, 10),
+            Type = TransactionType.Expense,
+            CategoryId = null,
+            UserId = 1
+        };
+
+        context.Transactions.Add(transaction);
+        await context.SaveChangesAsync();
+
+        var service = new TransactionService(context, new TestCurrentUserService(2));
+
+        // Act
+        var result = await service.DeleteAsync(transaction.Id);
+
+        // Assert
+        Assert.False(result);
+
+        // La transaccion del usuario 1 sigue ahi
+        var stillThere = await context.Transactions.FindAsync(transaction.Id);
+        Assert.NotNull(stillThere);
+    }
 }
