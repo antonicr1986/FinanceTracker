@@ -14,6 +14,18 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", builder =>
+    {
+        builder
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
 // Serilog sustituye al sistema de logs por defecto. Su configuracion vive en
 // appsettings.json, no aqui: asi se puede cambiar el nivel o el destino sin
 // recompilar ni volver a desplegar.
@@ -136,6 +148,7 @@ app.UseSwaggerUI();
 // activarse, respondaria 307 a las comprobaciones de /health que la
 // plataforma hace por HTTP, marcando la aplicacion como caida.
 
+app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
