@@ -1,0 +1,31 @@
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft.AspNetCore": "Warning",
+        "Microsoft.EntityFrameworkCore": "Warning"
+      }
+    },
+    "WriteTo": [
+      {
+        "Name": "Console",
+        "Args": {
+          "outputTemplate": "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}"
+        }
+      }
+    ],
+    "Enrich": [
+      "FromLogContext"
+    ]
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=YOUR_SERVER;Initial Catalog=YOUR_DATABASE;User ID=YOUR_USER;Password=YOUR_PASSWORD;"
+  },
+  "Jwt": {
+    "Issuer": "FinanceTracker.Api",
+    "Audience": "FinanceTracker.Client",
+    "ExpirationMinutes": 60
+  },
+  "AllowedHosts": "*"
+}
