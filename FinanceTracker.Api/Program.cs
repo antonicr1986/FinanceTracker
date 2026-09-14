@@ -135,6 +135,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // Cuenta de demostracion con datos de ejemplo, para que cualquiera pueda
+    // entrar a ver la aplicacion sin registrarse. No hace nada si ya existe.
+    await DemoDataSeeder.SeedAsync(db);
 }
 
 // El manejador de excepciones va el primero: envuelve a todo lo que viene
