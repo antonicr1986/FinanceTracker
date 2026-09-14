@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Api.HealthChecks;
+﻿using System.Text.Json.Serialization;
+using FinanceTracker.Api.HealthChecks;
 using FinanceTracker.Api.Middleware;
 using FinanceTracker.Api.Services;
 using FinanceTracker.Application.Interfaces;
@@ -47,7 +48,13 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Serialise enums as strings ("Income"/"Expense") so the client
+        // does not have to know the numeric values.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
