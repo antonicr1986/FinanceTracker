@@ -15,13 +15,19 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar CORS
+// Origenes permitidos por CORS, separados por comas. Viven en configuracion y
+// no en el codigo para poder anadir un dominio desde los ajustes del App
+// Service sin recompilar ni volver a desplegar.
+var allowedOrigins = (builder.Configuration["Cors:AllowedOrigins"]
+        ?? "http://localhost:3000")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", builder =>
+    options.AddPolicy("AllowFrontend", policy =>
     {
-        builder
-            .WithOrigins("http://localhost:3000")
+        policy
+            .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
             .AllowAnyHeader();
     });
