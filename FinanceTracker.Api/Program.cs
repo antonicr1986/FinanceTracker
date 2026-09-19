@@ -42,7 +42,24 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.FromLogContext());
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions =>
+        {
+            // Azure SQL en modo serverless se pausa tras un rato sin uso, y la
+            // primera conexion falla mientras despierta. Para SqlClient eso es
+            // un fallo transitorio, asi que EF lo reconoce y reintenta con
+            // esperas crecientes en vez de rendirse. Sin esto, la primera
+            // visita del dia se llevaba un 500.
+            sqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 8,
+                maxRetryDelay: TimeSpan.FromSeconds(15),
+                errorNumbersToAdd: null);
+
+            // Despertar la base puede acercarse al minuto; los 30 segundos por
+            // defecto se quedan cortos.
+            sqlOptions.CommandTimeout(90);
+        }));
 
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
