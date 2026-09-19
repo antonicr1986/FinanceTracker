@@ -41,6 +41,12 @@ public class UserService : IUserService
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
+        // Con la cuenta ya creada (y por tanto con Id), se le siembran las
+        // categorias de partida. Va en el mismo flujo a proposito: si fallara,
+        // quedaria una cuenta inservible para dar de alta movimientos.
+        _context.Categories.AddRange(DefaultCategories.ForUser(user.Id));
+        await _context.SaveChangesAsync();
+
         return new UserDto
         {
             Id = user.Id,
