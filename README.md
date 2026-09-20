@@ -1,17 +1,25 @@
 # 💰 FinanceTracker
+
+**English** · [Español](README.es.md)
+
 ![CI/CD](https://img.shields.io/github/actions/workflow/status/antonicr1986/FinanceTracker/ci.yml?style=for-the-badge&label=CI%2FCD&logo=githubactions&logoColor=white)
 ![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-2022-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)
 [![Container](https://img.shields.io/badge/ghcr.io-financetracker-24292E?style=for-the-badge&logo=github&logoColor=white)](https://github.com/antonicr1986/FinanceTracker/pkgs/container/financetracker)
 
-FinanceTracker is a personal finance tracking API built with .NET 8, Entity Framework Core and SQL Server LocalDB.
+FinanceTracker is a personal finance tracking API built with .NET 8, Entity Framework Core and SQL Server. It runs on Azure App Service against Azure SQL, and on SQL Server LocalDB or a container for local development.
 
 The goal of this project is to practice and demonstrate backend development skills using a layered architecture, DTOs, services, validation, Entity Framework Core and automated tests.
 
 **Web client:** this API has a Next.js and TypeScript front end at
 [financetracker-web](https://github.com/antonicr1986/financetracker-web),
-deployed at **[financetracker-web.vercel.app](https://financetracker-web.vercel.app)**.
+deployed at **[financetracker-web-tau.vercel.app](https://financetracker-web-tau.vercel.app/login)**.
+
+**Live API:** the deployment is public — try it on
+[Swagger](https://financetracker-api-cpctbta0gddddge5.belgiumcentral-01.azurewebsites.net/swagger).
+It sleeps after 20 minutes of inactivity, so the first request of the day takes a
+few seconds to wake the app and the database up.
 
 ## ✨ Features
 
@@ -41,6 +49,15 @@ deployed at **[financetracker-web.vercel.app](https://financetracker-web.vercel.
   - Budgets cannot be created when the category type does not match the budget type
   - Budgets cannot be updated when the category type does not match the budget type
   - Categories with associated transactions cannot be deleted
+- Finance data scoped to the authenticated user
+- Starter categories seeded when an account is registered
+- A public demo account seeded on startup, for trying the app without signing up
+- Error responses as ProblemDetails carrying a language-agnostic `code`
+- CORS origins read from configuration, changeable without redeploying
+- Retries on transient SQL failures, so a paused serverless database does not
+  turn the first request of the day into a 500
+- Health check endpoints and structured logging with Serilog
+- Global exception handling
 - Automated tests with xUnit and EF Core InMemory
 
 ## 🛠️ Technologies
@@ -48,7 +65,7 @@ deployed at **[financetracker-web.vercel.app](https://financetracker-web.vercel.
 - .NET 8
 - ASP.NET Core Web API
 - Entity Framework Core
-- SQL Server LocalDB
+- SQL Server (Azure SQL in production, LocalDB or a container locally)
 - JWT authentication (bearer tokens)
 - xUnit
 - EF Core InMemory
@@ -208,19 +225,28 @@ Example response:
 
 - Visual Studio 2022
 - .NET 8 SDK
-- SQL Server LocalDB
+- A SQL Server instance: LocalDB, the compose container, or Azure SQL
+
+### 🔐 Configuration and secrets
+
+`appsettings.json` is versioned and holds configuration only — logging, CORS
+origins, JWT issuer and audience. **No secret lives there.** The connection
+string and the JWT signing key are supplied from outside:
+
+Locally, with user secrets (the project already has a `UserSecretsId`):
+
+    cd FinanceTracker.Api
+    dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your connection string>"
+    dotnet user-secrets set "Jwt:Key" "<a long random string>"
+
+In Azure, as App Service environment variables named
+`ConnectionStrings__DefaultConnection` and `Jwt__Key`. The double underscore is
+how the platform spells the `:` of .NET configuration.
 
 ### 🗃️ Database Setup
 
-The project uses SQL Server LocalDB.
-
-Connection string example:
-
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=(localdb)\\MSSQLLocalDB;Database=FinanceTrackerDb;Trusted_Connection=True;TrustServerCertificate=True;"
-  }
-}
+Any SQL Server will do: LocalDB, the container from the compose file, or Azure
+SQL. Point the connection string at it and apply the migrations.
 
 Apply migrations using the Package Manager Console:
 
@@ -230,8 +256,9 @@ Or using the .NET CLI:
 
 dotnet ef database update
 
-When the API runs in a container it applies any pending migrations automatically
-at startup, so a fresh SQL Server instance is set up without any manual step.
+The API applies any pending migrations automatically at startup, so a fresh
+SQL Server instance is set up without any manual step. It also seeds the demo
+account on first run.
 
 ## ▶️ Running the API
 
@@ -300,10 +327,15 @@ pipeline automatically:
 - Runs the automated test suite
 - Builds the Docker image
 
+It also scans the **full repository history** for leaked credentials with
+gitleaks, as a job that does not depend on the build: if something leaked, it
+does not matter whether the code compiles.
+
 On pushes to `master` it additionally:
 
 - Publishes the image to GitHub Container Registry
 - Tags it with the full commit SHA and with `latest`
+- Deploys the API to Azure App Service, only once the tests are green
 
 Pull requests build the image to validate the Dockerfile, but never publish. Because
 every build is tagged by commit SHA, any previous version can be redeployed as-is,
@@ -336,8 +368,7 @@ Implemented:
 
 - Layered solution structure
 - Entity Framework Core setup
-- SQL Server LocalDB database
-- Database migrations
+- Database migrations, applied automatically at startup
 - Category CRUD
 - Transaction CRUD
 - Budget CRUD
@@ -365,16 +396,22 @@ Implemented:
 - CI/CD pipeline with GitHub Actions (build, test, publish)
 - Container image published to GHCR, tagged by commit SHA
 - Production compose file with health checks and a persistent database volume
+- User-scoped finance data
+- Starter categories seeded on registration, and a seeded public demo account
+- Global exception handling
+- Health check endpoints (`/health` liveness, `/health/ready` readiness)
+- Structured logging with Serilog
+- Secret scanning over the full history with gitleaks in the pipeline
+- Deployed to Azure App Service, published automatically from the pipeline
+- Error responses as ProblemDetails with a language-agnostic `code`
+- Resilience against transient SQL failures (paused serverless database)
 
 Planned improvements:
 
-- User-scoped finance data
 - More advanced budget reports
 - Controller tests
-- Global error handling
-- Health check endpoint and structured logging
-- Vulnerability scanning in the pipeline
-- Automated deployment to a hosted environment
+- Localised validation messages (the ones ASP.NET generates are still English)
+- Dependency vulnerability scanning in the pipeline
 - Kubernetes deployment
 
 ## 🎯 Purpose
