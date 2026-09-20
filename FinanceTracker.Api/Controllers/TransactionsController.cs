@@ -1,5 +1,6 @@
 ﻿using FinanceTracker.Application.DTOs.Transactions;
 using FinanceTracker.Application.Interfaces;
+using FinanceTracker.Api.Common;
 using Microsoft.AspNetCore.Mvc;
 using FinanceTracker.Application.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -54,12 +55,16 @@ public class TransactionsController : ControllerBase
 
         if (result.Result == CreateTransactionResult.CategoryNotFound)
         {
-            return BadRequest("The selected category does not exist.");
+            return ApiProblems.BadRequest(
+                "category_not_found",
+                "The selected category does not exist.");
         }
 
         if (result.Result == CreateTransactionResult.CategoryTypeMismatch)
         {
-            return BadRequest("The selected category type does not match the transaction type.");
+            return ApiProblems.BadRequest(
+                "category_type_mismatch",
+                "The selected category type does not match the transaction type.");
         }
 
         return CreatedAtAction(
@@ -80,12 +85,16 @@ public class TransactionsController : ControllerBase
 
         if (result == UpdateTransactionResult.CategoryNotFound)
         {
-            return BadRequest("The selected category does not exist.");
+            return ApiProblems.BadRequest(
+                "category_not_found",
+                "The selected category does not exist.");
         }
 
         if (result == UpdateTransactionResult.CategoryTypeMismatch)
         {
-            return BadRequest("The selected category type does not match the transaction type.");
+            return ApiProblems.BadRequest(
+                "category_type_mismatch",
+                "The selected category type does not match the transaction type.");
         }
 
         return NoContent();

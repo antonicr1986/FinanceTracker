@@ -1,5 +1,6 @@
 ﻿using FinanceTracker.Application.DTOs.Categories;
 using FinanceTracker.Application.Interfaces;
+using FinanceTracker.Api.Common;
 using Microsoft.AspNetCore.Mvc;
 using FinanceTracker.Application.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -75,7 +76,9 @@ public class CategoriesController : ControllerBase
 
         if (result == DeleteCategoryResult.CategoryHasTransactions)
         {
-            return BadRequest("Cannot delete category because it has associated transactions.");
+            return ApiProblems.BadRequest(
+                "category_has_transactions",
+                "Cannot delete category because it has associated transactions.");
         }
 
         return NoContent();

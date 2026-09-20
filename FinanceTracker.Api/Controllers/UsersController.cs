@@ -1,5 +1,6 @@
 ﻿using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
+using FinanceTracker.Api.Common;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceTracker.Api.Controllers;
@@ -24,7 +25,9 @@ public class UsersController : ControllerBase
 
         if (user is null)
         {
-            return BadRequest("A user with this email already exists.");
+            return ApiProblems.BadRequest(
+                "email_already_exists",
+                "A user with this email already exists.");
         }
 
         return CreatedAtAction(
@@ -53,7 +56,9 @@ public class UsersController : ControllerBase
 
         if (user is null)
         {
-            return Unauthorized("Invalid email or password.");
+            return ApiProblems.Unauthorized(
+                "invalid_credentials",
+                "Invalid email or password.");
         }
 
         var response = _tokenService.CreateToken(user);

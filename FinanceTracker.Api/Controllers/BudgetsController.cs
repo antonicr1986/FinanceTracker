@@ -1,6 +1,7 @@
 ﻿using FinanceTracker.Application.Common;
 using FinanceTracker.Application.DTOs.Budgets;
 using FinanceTracker.Application.Interfaces;
+using FinanceTracker.Api.Common;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 
@@ -46,12 +47,16 @@ public class BudgetsController : ControllerBase
 
         if (result.Result == BudgetOperationResult.CategoryNotFound)
         {
-            return BadRequest("The selected category does not exist.");
+            return ApiProblems.BadRequest(
+                "category_not_found",
+                "The selected category does not exist.");
         }
 
         if (result.Result == BudgetOperationResult.CategoryTypeMismatch)
         {
-            return BadRequest("The selected category type does not match the budget type.");
+            return ApiProblems.BadRequest(
+                "category_type_mismatch",
+                "The selected category type does not match the budget type.");
         }
 
         return CreatedAtAction(
@@ -72,12 +77,16 @@ public class BudgetsController : ControllerBase
 
         if (result == BudgetOperationResult.CategoryNotFound)
         {
-            return BadRequest("The selected category does not exist.");
+            return ApiProblems.BadRequest(
+                "category_not_found",
+                "The selected category does not exist.");
         }
 
         if (result == BudgetOperationResult.CategoryTypeMismatch)
         {
-            return BadRequest("The selected category type does not match the budget type.");
+            return ApiProblems.BadRequest(
+                "category_type_mismatch",
+                "The selected category type does not match the budget type.");
         }
 
         return NoContent();
