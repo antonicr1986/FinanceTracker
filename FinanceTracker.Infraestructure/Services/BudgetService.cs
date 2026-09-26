@@ -12,7 +12,7 @@ public class BudgetService : IBudgetService
     private readonly AppDbContext _context;
     private readonly ICurrentUserService _currentUserService;
 
-    public BudgetService(AppDbContext context,ICurrentUserService currentUserService)
+    public BudgetService(AppDbContext context, ICurrentUserService currentUserService)
     {
         _context = context;
         _currentUserService = currentUserService;

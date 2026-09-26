@@ -547,7 +547,7 @@ public class BudgetServiceTests
         Assert.False(result);
     }
 
-        [Fact]
+    [Fact]
     public async Task GetAllAsync_ShouldNotReturnBudgets_OfAnotherUser()
     {
         // Arrange

@@ -691,7 +691,7 @@ public class TransactionServiceTests
         Assert.Equal(1, result.TotalCount);
     }
 
-        [Fact]
+    [Fact]
     public async Task GetAllAsync_ShouldNotReturnTransactions_OfAnotherUser()
     {
         // Arrange
