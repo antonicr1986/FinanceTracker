@@ -330,6 +330,8 @@ pipeline automaticamente:
 
 - Restaura la solucion y comprueba su formato con `dotnet format`
   frente a `.editorconfig` (lint)
+- Falla si algun paquete NuGet, directo o transitivo, tiene una vulnerabilidad
+  conocida
 - Compila la solucion
 - Ejecuta las pruebas automatizadas
 - Construye la imagen Docker
@@ -349,6 +351,10 @@ publican. Como cada compilacion queda etiquetada por SHA, cualquier version
 anterior se puede volver a desplegar tal cual, lo que convierte una vuelta atras
 en un cambio de una linea.
 
+Dependabot abre cada mes una pull request con las actualizaciones menores y de
+parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
+las versiones mayores se dejan para decidirlas a mano.
+
 Archivo del workflow: `.github/workflows/ci.yml`
 
 ## 🧪 Ejecutar las pruebas
@@ -357,7 +363,7 @@ Desde el explorador de pruebas de Visual Studio o con:
 
 dotnet test
 
-Pruebas automatizadas actuales: 43 en verde.
+Pruebas automatizadas actuales: 74 en verde.
 
 La cobertura incluye hoy:
 

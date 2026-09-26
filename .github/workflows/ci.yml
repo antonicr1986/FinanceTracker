@@ -61,6 +61,18 @@ jobs:
       - name: Lint
         run: dotnet format FinanceTracker.sln --no-restore --verify-no-changes --verbosity diagnostic
 
+      # Busca paquetes NuGet con vulnerabilidades conocidas (base de datos de
+      # avisos de GitHub), tambien entre las dependencias de las dependencias.
+      # "dotnet list package" termina bien aunque encuentre alguna, asi que se
+      # busca en su salida la frase que lo indica y, si aparece, se falla.
+      - name: Vulnerable packages
+        run: |
+          dotnet list FinanceTracker.sln package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Vulnerable NuGet packages found (see the list above)"
+            exit 1
+          fi
+
       - name: Build
         run: dotnet build FinanceTracker.sln --no-restore --configuration Release
 

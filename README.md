@@ -339,6 +339,7 @@ pipeline automatically:
 
 - Restores the solution and checks its formatting with `dotnet format`
   against `.editorconfig` (lint)
+- Fails if any NuGet package, direct or transitive, has a known vulnerability
 - Builds the solution
 - Runs the automated test suite
 - Builds the Docker image
@@ -357,6 +358,10 @@ Pull requests build the image to validate the Dockerfile, but never publish. Bec
 every build is tagged by commit SHA, any previous version can be redeployed as-is,
 which makes rollbacks a one-line change.
 
+Dependabot opens a monthly pull request with the minor and patch updates of the
+NuGet packages and the workflow actions, grouped in one; major versions are left
+for a manual decision.
+
 Workflow file: `.github/workflows/ci.yml`
 
 ## 🧪 Running Tests
@@ -365,7 +370,7 @@ Tests can be executed from Visual Studio Test Explorer or with:
 
 dotnet test
 
-Current automated tests: 43 passing tests.
+Current automated tests: 74 passing tests.
 
 Test coverage currently includes:
 
