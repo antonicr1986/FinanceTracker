@@ -55,6 +55,12 @@ jobs:
       - name: Restore
         run: dotnet restore FinanceTracker.sln
 
+      # Lint: falla si algun fichero no sigue el formato del .editorconfig
+      # (espacios, sangria, lineas finales...). No cambia nada, solo comprueba; para
+      # arreglarlo en local basta con "dotnet format FinanceTracker.sln".
+      - name: Lint
+        run: dotnet format FinanceTracker.sln --no-restore --verify-no-changes --verbosity diagnostic
+
       - name: Build
         run: dotnet build FinanceTracker.sln --no-restore --configuration Release
 

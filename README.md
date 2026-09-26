@@ -337,7 +337,9 @@ IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
 This project uses GitHub Actions. On every push and pull request to `master`, the
 pipeline automatically:
 
-- Restores and builds the solution
+- Restores the solution and checks its formatting with `dotnet format`
+  against `.editorconfig` (lint)
+- Builds the solution
 - Runs the automated test suite
 - Builds the Docker image
 
