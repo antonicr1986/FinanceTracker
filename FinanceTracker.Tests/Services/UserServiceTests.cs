@@ -280,4 +280,81 @@ public class UserServiceTests
         // Assert
         Assert.Null(result);
     }
+
+    private static async Task<List<string>> RegisterAndGetCategoryNames(string? language)
+    {
+        using var context = CreateDbContext();
+        var service = new UserService(context);
+
+        var user = await service.RegisterAsync(new RegisterUserDto
+        {
+            Name = "Antonio",
+            Email = $"antonio-{Guid.NewGuid()}@test.com",
+            Password = "123456",
+            Language = language
+        });
+
+        return await context.Categories
+            .Where(category => category.UserId == user!.Id)
+            .Select(category => category.Name)
+            .ToListAsync();
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldSeedStarterCategoriesInEnglish_WhenLanguageIsEnglish()
+    {
+        var names = await RegisterAndGetCategoryNames("en");
+
+        Assert.Equal(8, names.Count);
+        Assert.Contains("Groceries", names);
+        Assert.Contains("Salary", names);
+        Assert.DoesNotContain("Supermercado", names);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldSeedStarterCategoriesInSpanish_WhenLanguageIsSpanish()
+    {
+        var names = await RegisterAndGetCategoryNames("es");
+
+        Assert.Equal(8, names.Count);
+        Assert.Contains("Supermercado", names);
+        Assert.Contains("Nómina", names);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldSeedStarterCategoriesInSpanish_WhenNoLanguageIsSent()
+    {
+        // Los clientes que todavia no envian el idioma siguen igual que antes.
+        var names = await RegisterAndGetCategoryNames(null);
+
+        Assert.Contains("Supermercado", names);
+    }
+
+    [Theory]
+    [InlineData("EN")]
+    [InlineData("en-GB")]
+    [InlineData(" en-US ")]
+    public void DefaultCategories_ShouldTreatAnyEnglishVariantAsEnglish(string language)
+    {
+        Assert.True(DefaultCategories.IsEnglish(language));
+    }
+
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void DefaultCategories_ShouldFallBackToSpanish_ForAnyOtherLanguage(string? language)
+    {
+        Assert.False(DefaultCategories.IsEnglish(language));
+        Assert.Contains(DefaultCategories.ForUser(1, language), category => category.Name == "Supermercado");
+    }
+
+    [Fact]
+    public void DefaultCategories_ShouldHaveTheSameTypesInBothLanguages()
+    {
+        var spanish = DefaultCategories.ForUser(1, "es").Select(category => category.Type);
+        var english = DefaultCategories.ForUser(1, "en").Select(category => category.Type);
+
+        Assert.Equal(spanish, english);
+    }
 }

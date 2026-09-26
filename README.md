@@ -64,7 +64,8 @@ spaces.
   - Budgets cannot be updated when the category type does not match the budget type
   - Categories with associated transactions cannot be deleted
 - Finance data scoped to the authenticated user
-- Starter categories seeded when an account is registered
+- Starter categories seeded when an account is registered, in the language the
+  client sends at sign-up (`"language": "en"` or `"es"`; Spanish when absent)
 - A public demo account seeded on startup, for trying the app without signing up
 - Error responses as ProblemDetails carrying a language-agnostic `code`
 - CORS origins read from configuration, changeable without redeploying
@@ -410,7 +411,7 @@ Implemented:
 - Container image published to GHCR, tagged by commit SHA
 - Production compose file with health checks and a persistent database volume
 - User-scoped finance data
-- Starter categories seeded on registration, and a seeded public demo account
+- Starter categories seeded on registration in the sign-up language, and a seeded public demo account
 - Global exception handling
 - Health check endpoints (`/health` liveness, `/health/ready` readiness)
 - Structured logging with Serilog

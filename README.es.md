@@ -65,7 +65,8 @@ espacios de los extremos.
   - No se puede actualizar un presupuesto cuyo tipo no coincida con el de la categoria
   - No se puede borrar una categoria con movimientos asociados
 - Los datos financieros estan acotados al usuario autenticado
-- Categorias de partida sembradas al registrar una cuenta
+- Categorias de partida sembradas al registrar una cuenta, en el idioma que el
+  cliente indica al registrarse (`"language": "en"` o `"es"`; en español si no llega)
 - Cuenta de demostracion publica, sembrada al arrancar, para probar sin registrarse
 - Errores como ProblemDetails con un `code` independiente del idioma
 - Origenes CORS leidos de configuracion, modificables sin volver a desplegar
@@ -392,7 +393,7 @@ Implementado:
 - Imagen publicada en GHCR, etiquetada por SHA de commit
 - Compose de produccion con health checks y volumen persistente
 - Datos financieros acotados al usuario autenticado
-- Categorias de partida al registrarse, y cuenta de demostracion sembrada
+- Categorias de partida al registrarse, en el idioma del registro, y cuenta de demostracion sembrada
 - Manejo global de excepciones
 - Health checks (`/health` liveness, `/health/ready` readiness)
 - Registro estructurado con Serilog

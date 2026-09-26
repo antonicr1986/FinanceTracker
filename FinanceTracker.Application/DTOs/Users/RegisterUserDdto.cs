@@ -16,4 +16,12 @@ public class RegisterUserDto
     [Required]
     [MinLength(6)]
     public string Password { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Idioma del cliente al registrarse ("es" o "en"), para sembrar las
+    /// categorias de partida en ese idioma. Opcional: sin el, o con cualquier
+    /// otro valor, se siembran en español, como antes de existir este campo.
+    /// </summary>
+    [MaxLength(10)]
+    public string? Language { get; set; }
 }
