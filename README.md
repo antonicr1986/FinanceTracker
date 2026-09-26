@@ -12,14 +12,28 @@ FinanceTracker is a personal finance tracking API built with .NET 8, Entity Fram
 
 The goal of this project is to practice and demonstrate backend development skills using a layered architecture, DTOs, services, validation, Entity Framework Core and automated tests.
 
-**Web client:** this API has a Next.js and TypeScript front end at
-[financetracker-web](https://github.com/antonicr1986/financetracker-web),
-deployed at **[financetracker-web-tau.vercel.app](https://financetracker-web-tau.vercel.app/login)**.
-
 **Live API:** the deployment is public — try it on
 [Swagger](https://financetracker-api-cpctbta0gddddge5.belgiumcentral-01.azurewebsites.net/swagger).
 It sleeps after 20 minutes of inactivity, so the first request of the day takes a
 few seconds to wake the app and the database up.
+
+## 🧩 Clients
+
+Three clients consume this API, each from a different platform and language.
+Having more than one consumer is what turns the API into a contract: the same
+endpoints, the same error codes and the same business rules have to hold from
+TypeScript, Kotlin and C# alike. All three share the same look, light and dark
+themes, Spanish and English, and the same public demo account, one click away.
+
+| Client | Stack | Try it |
+| --- | --- | --- |
+| [financetracker-web](https://github.com/antonicr1986/financetracker-web) | Next.js, TypeScript, Tailwind CSS | **[Live on Vercel](https://financetracker-web-tau.vercel.app/login)** |
+| [financetracker-android](https://github.com/antonicr1986/financetracker-android) | Kotlin, Retrofit, Material 3 | **[Signed APK](https://github.com/antonicr1986/financetracker-android/releases/latest)** |
+| [financetracker-desktop](https://github.com/antonicr1986/financetracker-desktop) | C#, WPF, MVVM | **[Windows download](https://github.com/antonicr1986/financetracker-desktop/releases/latest)** |
+
+The API does not reject repeated category names, so the three clients check it
+themselves, all in the same way: same type, ignoring case and surrounding
+spaces.
 
 ## ✨ Features
 
@@ -74,7 +88,6 @@ few seconds to wake the app and the database up.
 - GitHub Actions (CI/CD)
 - Docker / Docker Compose
 - GitHub Container Registry (GHCR)
-
 
 ## 🧱 Architecture
 

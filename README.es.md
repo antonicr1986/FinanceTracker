@@ -12,14 +12,29 @@ FinanceTracker es una API de finanzas personales construida con .NET 8, Entity F
 
 El objetivo del proyecto es practicar y demostrar desarrollo de backend con arquitectura por capas, DTOs, servicios, validacion, Entity Framework Core y pruebas automatizadas.
 
-**Cliente web:** esta API tiene un frontend en Next.js y TypeScript en
-[financetracker-web](https://github.com/antonicr1986/financetracker-web),
-desplegado en **[financetracker-web-tau.vercel.app](https://financetracker-web-tau.vercel.app/login)**.
-
 **API en vivo:** el despliegue es publico — pruebalo en
 [Swagger](https://financetracker-api-cpctbta0gddddge5.belgiumcentral-01.azurewebsites.net/swagger).
 Se duerme tras 20 minutos sin uso, asi que la primera peticion del dia tarda unos
 segundos en despertar la aplicacion y la base de datos.
+
+## 🧩 Clientes
+
+Tres clientes consumen esta API, cada uno desde una plataforma y un lenguaje
+distintos. Tener mas de un consumidor es lo que convierte la API en un contrato:
+los mismos endpoints, los mismos codigos de error y las mismas reglas de negocio
+tienen que funcionar igual desde TypeScript, Kotlin y C#. Los tres comparten
+estetica, tema claro y oscuro, español e ingles, y la misma cuenta de
+demostracion publica, a un clic.
+
+| Cliente | Tecnologias | Probarlo |
+| --- | --- | --- |
+| [financetracker-web](https://github.com/antonicr1986/financetracker-web) | Next.js, TypeScript, Tailwind CSS | **[En vivo en Vercel](https://financetracker-web-tau.vercel.app/login)** |
+| [financetracker-android](https://github.com/antonicr1986/financetracker-android) | Kotlin, Retrofit, Material 3 | **[APK firmado](https://github.com/antonicr1986/financetracker-android/releases/latest)** |
+| [financetracker-desktop](https://github.com/antonicr1986/financetracker-desktop) | C#, WPF, MVVM | **[Descarga para Windows](https://github.com/antonicr1986/financetracker-desktop/releases/latest)** |
+
+La API no rechaza nombres de categoria repetidos, asi que lo comprueban los tres
+clientes, todos de la misma forma: mismo tipo, sin distinguir mayusculas ni los
+espacios de los extremos.
 
 ## ✨ Funcionalidades
 
