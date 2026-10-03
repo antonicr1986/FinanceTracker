@@ -178,3 +178,24 @@ jobs:
           app-name: financetracker-api
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           images: ghcr.io/antonicr1986/financetracker:sha-${{ github.sha }}
+
+      # Comprobacion tras el despliegue: desplegar no es lo mismo que funcionar.
+      # Se llama a /health/ready, que solo responde 200 si la API ha arrancado
+      # Y llega a la base de datos. Se reintenta durante unos 5 minutos porque
+      # el contenedor tarda en arrancar y Azure SQL serverless puede estar
+      # pausado. Si no responde bien a tiempo, el pipeline falla en rojo.
+      - name: Smoke test (health check)
+        env:
+          APP_URL: ${{ steps.deploy.outputs.webapp-url }}
+        run: |
+          for i in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$APP_URL/health/ready" || true)
+            echo "Intento $i: HTTP $status"
+            if [ "$status" = "200" ]; then
+              echo "La API responde y llega a la base de datos."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::La API no responde correctamente en $APP_URL/health/ready"
+          exit 1
