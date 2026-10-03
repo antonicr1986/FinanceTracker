@@ -167,20 +167,14 @@ jobs:
       name: production
       url: ${{ steps.deploy.outputs.webapp-url }}
     steps:
-      - uses: actions/checkout@v7
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Publish
-        run: dotnet publish FinanceTracker.Api/FinanceTracker.Api.csproj -c Release -o publish
-
-      - name: Deploy to Azure Web App
+      # Azure ejecuta la MISMA imagen que se acaba de escanear con Trivy y
+      # publicar en GHCR, identificada por el SHA del commit: no se vuelve a
+      # compilar nada. Para volver a una version anterior basta con desplegar
+      # otra vez su etiqueta sha-<commit>.
+      - name: Deploy image to Azure Web App
         id: deploy
         uses: azure/webapps-deploy@v3
         with:
           app-name: financetracker-api
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: publish
+          images: ghcr.io/antonicr1986/financetracker:sha-${{ github.sha }}
