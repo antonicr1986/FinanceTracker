@@ -110,15 +110,51 @@ jobs:
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      # Primero se construye la imagen solo en local (load: true), sin publicarla,
+      # para poder escanearla antes de que llegue al registro
+      - name: Build image
         uses: docker/build-push-action@v7
         with:
           context: .
-          push: ${{ github.event_name == 'push' }}
+          load: true
+          tags: financetracker-api:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Trivy se instala desde el repositorio oficial de Aqua Security
+      # (paquete firmado), igual que se hace en un servidor
+      - name: Install Trivy
+        run: |
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq trivy
+
+      # Escanea la imagen entera: no solo los paquetes NuGet (eso ya lo hace
+      # "Vulnerable packages"), sino tambien las librerias del sistema operativo
+      # base. Falla si hay alguna vulnerabilidad ALTA o CRITICA que ya tenga
+      # parche; las que aun no lo tienen se muestran pero no bloquean, porque
+      # no hay nada que actualizar y un pipeline siempre en rojo deja de leerse.
+      - name: Scan image with Trivy
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            --no-progress \
+            financetracker-api:scan
+
+      # Solo se publica si el escaneo ha pasado. La segunda construccion sale
+      # de la cache, asi que es practicamente instantanea.
+      - name: Push image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   # Despliegue a Azure App Service. Solo en push a master y solo si los tests
   # pasan: un push roto no llega a produccion.
