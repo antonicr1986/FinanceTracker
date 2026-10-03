@@ -351,13 +351,16 @@ En los push a `master`, ademas:
 
 - Publica la imagen en GitHub Container Registry
 - La etiqueta con el SHA completo del commit y con `latest`
-- Despliega la API en Azure App Service, solo si las pruebas y el escaneo de la
-  imagen estan en verde: si Trivy falla, no se publica ni se despliega nada
+- Despliega en Azure App Service esa misma imagen, por su etiqueta SHA:
+  produccion ejecuta exactamente lo que se ha escaneado, sin volver a compilar.
+  Solo ocurre si las pruebas y el escaneo estan en verde: si Trivy falla, no se
+  publica ni se despliega nada
 
 Las pull requests construyen la imagen para validar el Dockerfile, pero nunca
 publican. Como cada compilacion queda etiquetada por SHA, cualquier version
-anterior de la imagen se puede recuperar tal cual, lo que convierte una vuelta
-atras con Docker en un cambio de una linea.
+anterior se puede volver a desplegar tal cual, sin recompilar: en local con
+`IMAGE_TAG` en el compose de produccion, y en Azure cambiando la etiqueta del
+contenedor.
 
 Dependabot abre cada mes una pull request con las actualizaciones menores y de
 parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;

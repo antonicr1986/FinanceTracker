@@ -358,12 +358,14 @@ On pushes to `master` it additionally:
 
 - Publishes the image to GitHub Container Registry
 - Tags it with the full commit SHA and with `latest`
-- Deploys the API to Azure App Service, only once the tests and the image scan
-  are green: if Trivy fails, nothing is published or deployed
+- Deploys that very same image to Azure App Service, by its SHA tag: production
+  runs exactly what was scanned, with no rebuild. It only happens once the tests
+  and the scan are green: if Trivy fails, nothing is published or deployed
 
 Pull requests build the image to validate the Dockerfile, but never publish. Because
-every build is tagged by commit SHA, any previous version of the image can be pulled as-is,
-which makes a Docker rollback a one-line change.
+every build is tagged by commit SHA, any previous version can be redeployed as-is,
+with no rebuild: locally with `IMAGE_TAG` in the production compose file, and in
+Azure by changing the container's tag.
 
 Dependabot opens a monthly pull request with the minor and patch updates of the
 NuGet packages and the workflow actions, grouped in one; major versions are left
