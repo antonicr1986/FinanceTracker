@@ -157,9 +157,10 @@ jobs:
           cache-from: type=gha
 
   # Despliegue a Azure App Service. Solo en push a master y solo si los tests
-  # pasan: un push roto no llega a produccion.
+  # pasan y el escaneo de la imagen (job docker) tambien: si Trivy encuentra
+  # una vulnerabilidad, no se publica la imagen ni se despliega el codigo.
   deploy:
-    needs: build-and-test
+    needs: [build-and-test, docker]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
