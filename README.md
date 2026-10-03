@@ -342,21 +342,28 @@ pipeline automatically:
 - Fails if any NuGet package, direct or transitive, has a known vulnerability
 - Builds the solution
 - Runs the automated test suite
-- Builds the Docker image
+- Builds the Docker image and scans it with Trivy
 
 It also scans the **full repository history** for leaked credentials with
 gitleaks, as a job that does not depend on the build: if something leaked, it
 does not matter whether the code compiles.
 
+The Docker image is scanned with **Trivy** before it is published. Unlike the
+NuGet package check, Trivy inspects the whole image, base OS libraries included.
+It fails on any high or critical vulnerability that already has a fix; those
+without one are shown in the log but do not block, because there is nothing to
+update and a pipeline that is always red stops being read.
+
 On pushes to `master` it additionally:
 
 - Publishes the image to GitHub Container Registry
 - Tags it with the full commit SHA and with `latest`
-- Deploys the API to Azure App Service, only once the tests are green
+- Deploys the API to Azure App Service, only once the tests and the image scan
+  are green: if Trivy fails, nothing is published or deployed
 
 Pull requests build the image to validate the Dockerfile, but never publish. Because
-every build is tagged by commit SHA, any previous version can be redeployed as-is,
-which makes rollbacks a one-line change.
+every build is tagged by commit SHA, any previous version of the image can be pulled as-is,
+which makes a Docker rollback a one-line change.
 
 Dependabot opens a monthly pull request with the minor and patch updates of the
 NuGet packages and the workflow actions, grouped in one; major versions are left

@@ -334,22 +334,30 @@ pipeline automaticamente:
   conocida
 - Compila la solucion
 - Ejecuta las pruebas automatizadas
-- Construye la imagen Docker
+- Construye la imagen Docker y la escanea con Trivy
 
 Ademas escanea **todo el historial del repositorio** en busca de credenciales
 filtradas con gitleaks, en un job que no depende de la compilacion: si algo se ha
 filtrado, da igual que el codigo compile.
 
+La imagen Docker se escanea con **Trivy** antes de publicarla. A diferencia de la
+comprobacion de paquetes NuGet, Trivy revisa la imagen entera, incluidas las
+librerias del sistema operativo base. Falla si encuentra una vulnerabilidad alta
+o critica que ya tenga parche; las que aun no lo tienen se muestran en el log
+pero no bloquean, porque no hay nada que actualizar y un pipeline siempre en
+rojo deja de leerse.
+
 En los push a `master`, ademas:
 
 - Publica la imagen en GitHub Container Registry
 - La etiqueta con el SHA completo del commit y con `latest`
-- Despliega la API en Azure App Service, solo si las pruebas estan en verde
+- Despliega la API en Azure App Service, solo si las pruebas y el escaneo de la
+  imagen estan en verde: si Trivy falla, no se publica ni se despliega nada
 
 Las pull requests construyen la imagen para validar el Dockerfile, pero nunca
 publican. Como cada compilacion queda etiquetada por SHA, cualquier version
-anterior se puede volver a desplegar tal cual, lo que convierte una vuelta atras
-en un cambio de una linea.
+anterior de la imagen se puede recuperar tal cual, lo que convierte una vuelta
+atras con Docker en un cambio de una linea.
 
 Dependabot abre cada mes una pull request con las actualizaciones menores y de
 parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
