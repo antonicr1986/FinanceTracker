@@ -70,16 +70,21 @@ jobs:
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      # Write-only: solo se envia a Azure si cambia su version, y un plan no
-      # envia nada. Un valor de relleno basta y la contrasena real no sale de
-      # Azure.
-      TF_VAR_sql_admin_password: not-used-by-plan
       TF_IN_AUTOMATION: true
     steps:
       - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
+      # La contrasena del administrador SQL es write-only: solo se envia a
+      # Azure cuando cambia su version, y un plan nunca envia nada. Basta con
+      # un valor aleatorio generado aqui, asi la real no sale de Azure ni hay
+      # nada con pinta de contrasena escrito en el repo.
+      - name: Valor de relleno para la contrasena SQL
+        run: |
+          filler=$(openssl rand -hex 24)
+          echo "::add-mask::$filler"
+          echo "TF_VAR_sql_admin_password=$filler" >> "$GITHUB_ENV"
       - name: terraform init
         run: terraform init -input=false
       - name: terraform plan
