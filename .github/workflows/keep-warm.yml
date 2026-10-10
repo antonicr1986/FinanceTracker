@@ -1,0 +1,46 @@
+name: Keep API warm
+
+# El plan gratuito F1 de App Service no permite "Always On": tras unos 20
+# minutos sin peticiones la API se descarga y la siguiente tarda en arrancar.
+# Este workflow la llama cada 15 minutos en horario laboral, que es cuando
+# alguien suele probar la demo.
+#
+# Llama a /health (liveness), que NO consulta la base de datos: asi Azure SQL
+# serverless sigue pausandose cuando nadie la usa y no gasta el cupo gratuito
+# de vCore-segundos. La base de datos la despierta la web al abrir el login
+# (precalentamiento), solo cuando de verdad entra alguien.
+#
+# Notas:
+# - El cron va en UTC. 6-19 UTC cubre de 8:00 a 20:00 en Espana tanto en
+#   horario de verano (UTC+2) como de invierno (UTC+1).
+# - GitHub puede retrasar unos minutos las ejecuciones programadas, y las
+#   desactiva si el repositorio pasa 60 dias sin actividad.
+# - Si la API no responde tras varios intentos el job falla: sirve tambien
+#   como aviso de que algo va mal en produccion.
+
+on:
+  schedule:
+    - cron: '*/15 6-19 * * 1-5'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEALTH_URL: https://financetracker-api-cpctbta0gddddge5.belgiumcentral-01.azurewebsites.net/health
+    steps:
+      - name: Ping /health
+        run: |
+          for i in 1 2 3 4 5; do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "$HEALTH_URL" || true)
+            echo "Intento $i: HTTP $status"
+            if [ "$status" = "200" ]; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::La API no responde en $HEALTH_URL"
+          exit 1
