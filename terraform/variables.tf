@@ -21,8 +21,9 @@ variable "resource_group_name" {
 }
 
 variable "service_plan_name" {
-  description = "Nombre del plan de App Service (F1). Sale en: az appservice plan list -g financetracker-rg -o table"
+  description = "Nombre del plan de App Service (F1)."
   type        = string
+  default     = "financetracker-plan"
 }
 
 variable "web_app_name" {
