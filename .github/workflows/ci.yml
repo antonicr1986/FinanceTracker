@@ -40,6 +40,88 @@ jobs:
       - name: terraform validate
         run: terraform validate
 
+  # terraform plan contra Azure en cada PR, para ver ANTES de fusionar que
+  # cambiaria en la infraestructura. Solo lectura:
+  #  - Entra en Azure por OIDC (sin secretos en GitHub) con una identidad que
+  #    solo puede leer el grupo de recursos y el estado.
+  #  - -lock=false porque esa identidad no puede bloquear el estado; nunca
+  #    escribe, asi que no hay riesgo.
+  #  - El repo es publico y el plan completo imprimiria los app_settings
+  #    (cadena de conexion, Jwt__Key). Por eso NO se muestra: solo un resumen
+  #    de recurso y accion, en el resumen del job y como comentario en la PR.
+  # No corre en PR de forks (no tendrian acceso) ni en las de Dependabot.
+  terraform-plan:
+    needs: terraform
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write       # token OIDC para Azure
+      contents: read
+      pull-requests: write  # comentario con el resumen
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_IN_AUTOMATION: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      # La contrasena del administrador SQL es write-only: solo se envia a
+      # Azure cuando cambia su version, y un plan nunca envia nada. Basta con
+      # un valor aleatorio generado aqui, asi la real no sale de Azure ni hay
+      # nada con pinta de contrasena escrito en el repo.
+      - name: Valor de relleno para la contrasena SQL
+        run: |
+          filler=$(openssl rand -hex 24)
+          echo "::add-mask::$filler"
+          echo "TF_VAR_sql_admin_password=$filler" >> "$GITHUB_ENV"
+      - name: terraform init
+        run: terraform init -input=false
+      - name: terraform plan
+        # La salida normal (con los atributos) se descarta; los errores van
+        # por stderr y si se ven.
+        run: terraform plan -lock=false -input=false -no-color -out=tfplan > /dev/null
+      - name: Resumen del plan
+        id: summary
+        run: |
+          changes=$(terraform show -json tfplan | jq -r '
+            .resource_changes[]
+            | select(.change.actions != ["no-op"] and .change.actions != ["read"])
+            | "| `\(.address)` | \(.change.actions | join(" + ")) |"')
+          rm -f tfplan
+          {
+            echo "### Terraform plan"
+            echo
+            if [ -z "$changes" ]; then
+              echo "Sin cambios: la infraestructura coincide con el codigo."
+            else
+              echo "| Recurso | Accion |"
+              echo "|---|---|"
+              echo "$changes"
+              if echo "$changes" | grep -q "delete"; then
+                echo
+                echo "> :warning: **Este plan BORRA o RECREA recursos.** Revisalo con terraform plan en local antes de fusionar."
+              fi
+            fi
+            echo
+            echo "_Solo el resumen: el plan completo no se publica porque incluiria secretos._"
+          } > summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comentar en la PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file summary.md --edit-last --create-if-none
+
   # Busca credenciales en TODO el historial, no solo en el ultimo commit.
   # No depende del build: si hay una fuga, da igual que compile.
   secrets:
