@@ -23,6 +23,23 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Comprueba la infraestructura como codigo sin tocar Azure: formato y
+  # validacion de la sintaxis y los tipos. No necesita credenciales.
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v3
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff
+      - name: terraform init
+        run: terraform init -backend=false -input=false
+      - name: terraform validate
+        run: terraform validate
+
   # Busca credenciales en TODO el historial, no solo en el ultimo commit.
   # No depende del build: si hay una fuga, da igual que compile.
   secrets:

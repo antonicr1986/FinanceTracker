@@ -1,0 +1,9 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+# Un plan guardado incluye el estado: tambien los secretos de la app.
+tfplan
+*.tfplan
