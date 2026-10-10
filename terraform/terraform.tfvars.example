@@ -1,0 +1,3 @@
+# Copia este fichero como terraform.tfvars (ignorado en git) y rellenalo.
+subscription_id   = "00000000-0000-0000-0000-000000000000"
+service_plan_name = "ASP-financetrackerrg-XXXX"
