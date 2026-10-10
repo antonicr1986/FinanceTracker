@@ -89,6 +89,7 @@ spaces.
 - GitHub Actions (CI/CD)
 - Docker / Docker Compose
 - GitHub Container Registry (GHCR)
+- Terraform (Azure infrastructure, remote state, OIDC)
 
 ## 🧱 Architecture
 
@@ -372,6 +373,43 @@ NuGet packages and the workflow actions, grouped in one; major versions are left
 for a manual decision.
 
 Workflow file: `.github/workflows/ci.yml`
+
+## 🏗️ Infrastructure as Code (Terraform)
+
+The Azure infrastructure is described with **Terraform** in [`terraform/`](terraform/):
+resource group, App Service plan (F1), Linux web app (container from GHCR),
+Azure SQL server and serverless database. The resources already existed and
+were **imported** with `import` blocks, without recreating anything.
+
+```mermaid
+flowchart LR
+    PR[Pull request] --> CHECK[fmt + validate]
+    CHECK --> PLAN[terraform plan<br/>OIDC, read-only]
+    PLAN --> COMMENT[Summary comment<br/>on the PR]
+    COMMENT --> MERGE[Merge to master]
+    MERGE --> APPLY[terraform apply<br/>reviewed, from local]
+    STATE[(State in<br/>Azure Storage)] -.- PLAN
+    STATE -.- APPLY
+```
+
+- **Remote state** in Azure Storage: encrypted, locked during each operation
+  (blob lease) and versioned. The storage account only accepts Entra ID
+  identities; account keys are disabled.
+- **`terraform plan` on every pull request.** GitHub Actions signs in to Azure
+  with **OIDC** (no secrets stored in GitHub), using an identity with a custom
+  read-only role scoped to the resource group. It posts a summary on the PR
+  (resource and action) and warns if anything would be destroyed or replaced.
+- **No secrets in public logs.** The repository is public and a full plan would
+  print the app settings, so only the summary is published.
+- **Secrets stay out of Terraform.** App settings (connection string, JWT key)
+  are ignored with `ignore_changes`; the SQL admin password is a **write-only**
+  argument fed from an ephemeral variable, so it never lands in the state or in
+  the plan. Rotating it is a matter of bumping `sql_admin_password_version`.
+- **Guard rails:** `prevent_destroy` on the resource group, the SQL server and
+  the database.
+- **Clear split with the pipeline:** Terraform owns the infrastructure; the
+  `deploy` job owns the container image (ignored by Terraform), so they never
+  fight over the same setting.
 
 ## 🧪 Running Tests
 
