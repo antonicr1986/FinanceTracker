@@ -90,6 +90,7 @@ espacios de los extremos.
 - GitHub Actions (CI/CD)
 - Docker / Docker Compose
 - GitHub Container Registry (GHCR)
+- Terraform (infraestructura de Azure, estado remoto, OIDC)
 
 ## 🧱 Arquitectura
 
@@ -367,6 +368,44 @@ parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
 las versiones mayores se dejan para decidirlas a mano.
 
 Archivo del workflow: `.github/workflows/ci.yml`
+
+## 🏗️ Infraestructura como codigo (Terraform)
+
+La infraestructura de Azure esta descrita con **Terraform** en [`terraform/`](terraform/):
+grupo de recursos, plan de App Service (F1), web app Linux (contenedor de GHCR),
+servidor Azure SQL y base de datos serverless. Los recursos ya existian y se
+**importaron** con bloques `import`, sin recrear nada.
+
+```mermaid
+flowchart LR
+    PR[Pull request] --> CHECK[fmt + validate]
+    CHECK --> PLAN[terraform plan<br/>OIDC, solo lectura]
+    PLAN --> COMMENT[Comentario resumen<br/>en la PR]
+    COMMENT --> MERGE[Merge a master]
+    MERGE --> APPLY[terraform apply<br/>revisado, en local]
+    STATE[(Estado en<br/>Azure Storage)] -.- PLAN
+    STATE -.- APPLY
+```
+
+- **Estado remoto** en Azure Storage: cifrado, bloqueado durante cada operacion
+  (lease del blob) y versionado. La cuenta solo admite identidades de Entra ID;
+  las claves de cuenta estan desactivadas.
+- **`terraform plan` en cada pull request.** GitHub Actions entra en Azure por
+  **OIDC** (sin secretos guardados en GitHub), con una identidad que tiene un rol
+  propio de solo lectura limitado al grupo de recursos. Publica un resumen en la
+  PR (recurso y accion) y avisa si algo se fuera a borrar o recrear.
+- **Sin secretos en logs publicos.** El repositorio es publico y un plan completo
+  imprimiria la configuracion de la app, asi que solo se publica el resumen.
+- **Los secretos se quedan fuera de Terraform.** La configuracion de la app
+  (cadena de conexion, clave JWT) se ignora con `ignore_changes`; la contrasena
+  del administrador SQL es un argumento **write-only** alimentado por una variable
+  efimera, asi que nunca llega al estado ni al plan. Rotarla es subir
+  `sql_admin_password_version`.
+- **Protecciones:** `prevent_destroy` en el grupo de recursos, el servidor SQL y
+  la base de datos.
+- **Reparto claro con el pipeline:** Terraform gestiona la infraestructura; el job
+  `deploy` gestiona la imagen del contenedor (que Terraform ignora), asi que
+  nunca se pisan.
 
 ## 🧪 Ejecutar las pruebas
 
