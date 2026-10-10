@@ -14,8 +14,11 @@ El objetivo del proyecto es practicar y demostrar desarrollo de backend con arqu
 
 **API en vivo:** el despliegue es publico — pruebalo en
 [Swagger](https://financetracker-api-cpctbta0gddddge5.belgiumcentral-01.azurewebsites.net/swagger).
-Se duerme tras 20 minutos sin uso, asi que la primera peticion del dia tarda unos
-segundos en despertar la aplicacion y la base de datos.
+Corre en el plan gratuito de Azure: la aplicacion se descarga tras 20 minutos sin
+uso y la base de datos serverless se pausa a la hora. Un workflow programado
+mantiene cargada la aplicacion entre semana en horario laboral, y los tres
+clientes despiertan la base de datos en cuanto se abre su pantalla de acceso,
+asi que la espera ocurre casi siempre mientras aun se esta leyendo.
 
 ## 🧩 Clientes
 
@@ -367,7 +370,14 @@ Dependabot abre cada mes una pull request con las actualizaciones menores y de
 parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
 las versiones mayores se dejan para decidirlas a mano.
 
-Archivo del workflow: `.github/workflows/ci.yml`
+Un segundo workflow, `keep-warm.yml`, llama a `/health` cada 15 minutos entre
+semana en horario laboral para que la aplicacion del plan gratuito siga cargada.
+Usa a proposito la comprobacion de liveness, que no toca la base de datos: Azure
+SQL se sigue pausando cuando nadie la usa y no gasta el cupo gratuito de
+vCore-segundos. Si la API no responde tras varios intentos, la ejecucion falla, y
+eso sirve tambien de aviso de que produccion esta caida.
+
+Archivos de los workflows: `.github/workflows/ci.yml` y `.github/workflows/keep-warm.yml`
 
 ## 🏗️ Infraestructura como codigo (Terraform)
 

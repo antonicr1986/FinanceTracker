@@ -14,8 +14,11 @@ The goal of this project is to practice and demonstrate backend development skil
 
 **Live API:** the deployment is public — try it on
 [Swagger](https://financetracker-api-cpctbta0gddddge5.belgiumcentral-01.azurewebsites.net/swagger).
-It sleeps after 20 minutes of inactivity, so the first request of the day takes a
-few seconds to wake the app and the database up.
+It runs on Azure's free tier: the app unloads after 20 idle minutes and the
+serverless database pauses after an hour. A scheduled workflow keeps the app
+loaded on weekdays during working hours, and the three clients wake the database
+as soon as their sign-in screen opens, so the wait mostly happens while you are
+still reading it.
 
 ## 🧩 Clients
 
@@ -372,7 +375,14 @@ Dependabot opens a monthly pull request with the minor and patch updates of the
 NuGet packages and the workflow actions, grouped in one; major versions are left
 for a manual decision.
 
-Workflow file: `.github/workflows/ci.yml`
+A second workflow, `keep-warm.yml`, calls `/health` every 15 minutes on
+weekdays during working hours so the free-tier app stays loaded. It hits the
+liveness check on purpose, which does not touch the database: Azure SQL keeps
+pausing when nobody uses it and does not burn the free vCore quota. If the API
+does not answer after several attempts the run fails, which doubles as a
+production alert.
+
+Workflow files: `.github/workflows/ci.yml` and `.github/workflows/keep-warm.yml`
 
 ## 🏗️ Infrastructure as Code (Terraform)
 
