@@ -384,6 +384,44 @@ production alert.
 
 Workflow files: `.github/workflows/ci.yml` and `.github/workflows/keep-warm.yml`
 
+## 🔷 Azure DevOps
+
+Besides GitHub Actions, the four repositories of the project — this API and the
+three clients — also live in **Azure DevOps**, grouped in one project: Azure
+Repos holds a copy of each one, and Azure Pipelines builds and tests them from
+there. The goal is running the same CI on both platforms, not replacing one with
+the other.
+
+**How it flows:** push to GitHub → copy in Azure Repos → Azure Pipeline. A
+workflow in each repository (`sync-azure-devops.yml` here, `mirror-azure.yml` in
+the clients) pushes every branch and tag to Azure Repos with a personal access
+token kept as a GitHub secret. Azure Pipelines listens to that copy, so nothing
+has to be pushed twice.
+
+The API pipeline, `azure-pipelines.yml`, runs in two stages:
+
+- **Build and tests**: restore, build in Release, run the xUnit suite with code
+  coverage, publish the results to the run's *Tests* and *Code Coverage* tabs,
+  and keep the published API as a pipeline artifact.
+- **Docker**: build the image, only once the first stage is green, to validate
+  the Dockerfile.
+
+Each client has its own pipeline: lint, tests and production build for the web;
+format check, build and tests on Windows for the desktop; unit tests and a debug
+APK for Android.
+
+Three decisions behind it:
+
+- **The copy does not depend on the CI.** The sync is a job of its own, so Azure
+  Repos stays identical to GitHub even when a build fails: a red build is still
+  a commit that happened.
+- **Deploying stays in GitHub Actions.** Azure Pipelines only validates. Two
+  systems deploying the same push would race each other, the same problem the
+  web client had with Vercel.
+- **The Azure DevOps project is private.** Microsoft has retired public projects
+  in Azure DevOps, so it cannot be opened without an invitation; this section
+  and the pipeline files are how it shows from here.
+
 ## 🏗️ Infrastructure as Code (Terraform)
 
 The Azure infrastructure is described with **Terraform** in [`terraform/`](terraform/):

@@ -379,6 +379,44 @@ eso sirve tambien de aviso de que produccion esta caida.
 
 Archivos de los workflows: `.github/workflows/ci.yml` y `.github/workflows/keep-warm.yml`
 
+## 🔷 Azure DevOps
+
+Además de en GitHub Actions, los cuatro repositorios del proyecto —esta API y
+los tres clientes— viven también en **Azure DevOps**, agrupados en un mismo
+proyecto: Azure Repos guarda una copia de cada uno y Azure Pipelines los compila
+y los prueba desde ahí. El objetivo es tener el mismo CI en las dos plataformas,
+no sustituir una por otra.
+
+**El recorrido:** push a GitHub → copia en Azure Repos → pipeline de Azure. Un
+workflow en cada repositorio (`sync-azure-devops.yml` aquí, `mirror-azure.yml` en
+los clientes) sube cada rama y cada tag a Azure Repos con un token de acceso
+personal guardado como secreto de GitHub. Azure Pipelines escucha esa copia, así
+que no hay que subir nada dos veces.
+
+El pipeline de la API, `azure-pipelines.yml`, tiene dos etapas:
+
+- **Build y tests**: restaura, compila en Release, ejecuta las pruebas de xUnit
+  con cobertura de código, publica los resultados en las pestañas *Tests* y
+  *Code Coverage* de la ejecución y guarda la API publicada como artefacto.
+- **Docker**: construye la imagen, solo cuando la primera etapa está en verde,
+  para validar el Dockerfile.
+
+Cada cliente tiene su propio pipeline: linter, pruebas y build de producción en
+la web; comprobación de formato, build y pruebas en Windows en el de escritorio;
+pruebas unitarias y un APK de depuración en Android.
+
+Tres decisiones detrás:
+
+- **La copia no depende del CI.** La sincronización es un job independiente, así
+  que Azure Repos sigue igual que GitHub aunque falle un build: un build en rojo
+  sigue siendo un commit que existe.
+- **El despliegue se queda en GitHub Actions.** Azure Pipelines solo valida. Dos
+  sistemas desplegando el mismo push competirían entre sí, el mismo problema que
+  tuvo el cliente web con Vercel.
+- **El proyecto de Azure DevOps es privado.** Microsoft ha retirado los proyectos
+  públicos en Azure DevOps, así que no se puede abrir sin invitación; esta
+  sección y los archivos de los pipelines son lo que lo muestra desde aquí.
+
 ## 🏗️ Infraestructura como codigo (Terraform)
 
 La infraestructura de Azure esta descrita con **Terraform** en [`terraform/`](terraform/):
