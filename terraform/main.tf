@@ -50,13 +50,20 @@ resource "azurerm_linux_web_app" "api" {
   webdeploy_publish_basic_authentication_enabled = true
 
   site_config {
-    always_on  = false # F1 no lo permite: la API se duerme a los 20 min
-    ftps_state = "Disabled"
+    always_on     = false # F1 no lo permite: la API se duerme a los 20 min
+    ftps_state    = "Disabled"
+    http2_enabled = true
 
     application_stack {
       docker_image_name   = trimprefix(var.container_image, "ghcr.io/")
       docker_registry_url = "https://ghcr.io"
     }
+  }
+
+  # Identidad administrada: la Web App puede autenticarse en otros servicios
+  # de Azure (Key Vault, SQL) sin usuario ni contrasena. Gratis.
+  identity {
+    type = "SystemAssigned"
   }
 
   tags = local.tags

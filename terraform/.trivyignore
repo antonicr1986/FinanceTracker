@@ -1,0 +1,23 @@
+# Exclusiones del escaneo de seguridad de Terraform (trivy config).
+# Cada entrada es una decision consciente, con su motivo. Revisarlas si
+# cambia el plan de App Service o la arquitectura.
+
+# AZU-0001: certificados de cliente (mTLS) desactivados a proposito.
+# La API la consumen los frontends desde el navegador; no se puede exigir
+# un certificado a cada cliente. La autenticacion se hace con JWT.
+AZU-0001
+
+# AZU-0003: autenticacion de App Service (Easy Auth) desactivada a proposito.
+# La API gestiona su propia autenticacion y autorizacion con JWT.
+AZU-0003
+
+# AZU-0022: SQL Server con acceso de red publico.
+# El plan F1 de App Service no permite integracion con VNet y un private
+# endpoint tiene coste. El acceso queda limitado por las reglas de firewall
+# de SQL. Revisar si se sube de plan.
+AZU-0022
+
+# AZU-0027: auditoria de SQL no configurada.
+# Necesita una Storage Account o Log Analytics (coste). Pendiente para
+# cuando se anada monitorizacion.
+AZU-0027
