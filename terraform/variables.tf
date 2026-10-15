@@ -79,5 +79,5 @@ variable "sql_admin_password" {
 variable "sql_admin_password_version" {
   description = "Version de la contrasena del administrador SQL."
   type        = number
-  default     = 0
+  default     = 1 # 1: primera rotacion (octubre de 2026)
 }

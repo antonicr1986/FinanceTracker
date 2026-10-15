@@ -32,7 +32,7 @@ devuelven 404. No vio ningún endpoint real.
   Después: borrar el secret, poner `webdeploy_publish_basic_authentication_enabled = false`
   en `main.tf` y `terraform apply`.
 - [ ] **Required reviewers** en el environment `production` (Settings → Environments).
-- [ ] **SAST con CodeQL** (Settings → Code security → CodeQL, Default setup).
+- [x] **SAST con CodeQL** (Settings → Code security → CodeQL, Default setup).
 - [ ] **Cadena de suministro**:
   - [ ] Publicar exactamente la imagen escaneada (o desplegar por digest `@sha256:`).
   - [ ] Generar SBOM (`trivy image --format cyclonedx`).
@@ -42,15 +42,15 @@ devuelven 404. No vio ningún endpoint real.
 
 ## Repositorio
 
-- [ ] Branch protection en `master` (PR obligatoria, checks en verde, sin force push).
-- [ ] Dependabot alerts + security updates, y secret scanning con push protection.
+- [x] Ruleset `proteger-main`: sin borrado ni force push en la rama principal (sin PR obligatoria: se trabaja con push directo).
+- [x] Dependabot alerts + security updates, y secret scanning con push protection.
 - [ ] `SECURITY.md` con cómo reportar vulnerabilidades.
 
 ## Azure / runtime
 
-- [ ] **Rotar la contraseña del administrador SQL**: nueva contraseña en
-  `TF_VAR_sql_admin_password`, subir `sql_admin_password_version` a `1`,
-  `terraform apply` y **actualizar la cadena de conexión** de la Web App.
+- [x] **Rotar la contraseña del administrador SQL** (octubre de 2026, versión 1). Para la próxima: nueva contraseña en
+  `TF_VAR_sql_admin_password`, subir `sql_admin_password_version` en 1,
+  `terraform apply` y **actualizar la cadena de conexión** de la Web App: está duplicada en la app setting `ConnectionStrings__DefaultConnection` y en la connection string `DefaultConnection` (tipo SQLAzure); hay que cambiar las dos.
 - [ ] **Key Vault** para `Jwt__Key` y la cadena de conexión, con Key Vault
   references y la managed identity de la Web App (ya creada).
 - [ ] **SQL sin contraseña**: autenticación Microsoft Entra con la managed identity.
