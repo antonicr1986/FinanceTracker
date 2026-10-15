@@ -363,13 +363,22 @@ On pushes to `master` it additionally:
 - Publishes the image to GitHub Container Registry
 - Tags it with the full commit SHA and with `latest`
 - Deploys that very same image to Azure App Service, by its SHA tag: production
-  runs exactly what was scanned, with no rebuild. It only happens once the tests
-  and the scan are green: if Trivy fails, nothing is published or deployed
+  runs exactly what was scanned, with no rebuild. It only happens once **every**
+  check passes: tests, image scan, secret scan, and infrastructure validation
+  and security scan. If any of them fails, nothing is deployed
+- After the deployment, **OWASP ZAP** scans the published API (DAST, passive
+  baseline mode). The report is kept as a run artifact (`zap-report`) rather
+  than an issue, because the repository is public
 
 Pull requests build the image to validate the Dockerfile, but never publish. Because
 every build is tagged by commit SHA, any previous version can be redeployed as-is,
 with no rebuild: locally with `IMAGE_TAG` in the production compose file, and in
 Azure by changing the container's tag.
+
+The workflow itself is kept tight: the `GITHUB_TOKEN` is read-only by default
+and only the jobs that need more ask for it; every job has a time limit, so a
+stuck one does not burn minutes for hours; and only one production deployment
+runs at a time (`concurrency`), without cancelling the one in progress.
 
 Dependabot opens a monthly pull request with the minor and patch updates of the
 NuGet packages and the workflow actions, grouped in one; major versions are left
@@ -431,7 +440,7 @@ were **imported** with `import` blocks, without recreating anything.
 
 ```mermaid
 flowchart LR
-    PR[Pull request] --> CHECK[fmt + validate]
+    PR[Pull request] --> CHECK[fmt + validate<br/>+ Trivy scan]
     CHECK --> PLAN[terraform plan<br/>OIDC, read-only]
     PLAN --> COMMENT[Summary comment<br/>on the PR]
     COMMENT --> MERGE[Merge to master]
@@ -455,6 +464,13 @@ flowchart LR
   the plan. Rotating it is a matter of bumping `sql_admin_password_version`.
 - **Guard rails:** `prevent_destroy` on the resource group, the SQL server and
   the database.
+- **Security scanning** with Trivy (`trivy config`) on every push and pull
+  request: it looks for misconfigurations (public access, TLS, encryption...)
+  and fails on high or critical findings, which also blocks the deployment.
+  Exceptions are deliberate decisions, such as what the free tier does not
+  allow, and are documented with their reason in `terraform/.trivyignore`.
+- **Managed identity** on the web app: the groundwork for reading secrets from
+  Key Vault and connecting to SQL without a password.
 - **Clear split with the pipeline:** Terraform owns the infrastructure; the
   `deploy` job owns the container image (ignored by Terraform), so they never
   fight over the same setting.

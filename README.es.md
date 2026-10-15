@@ -357,14 +357,24 @@ En los push a `master`, ademas:
 - La etiqueta con el SHA completo del commit y con `latest`
 - Despliega en Azure App Service esa misma imagen, por su etiqueta SHA:
   produccion ejecuta exactamente lo que se ha escaneado, sin volver a compilar.
-  Solo ocurre si las pruebas y el escaneo estan en verde: si Trivy falla, no se
-  publica ni se despliega nada
+  Solo ocurre si pasan **todos** los controles: pruebas, escaneo de la imagen,
+  escaneo de secretos y validacion y escaneo de seguridad de la infraestructura.
+  Si cualquiera falla, no se despliega nada
+- Tras el despliegue, **OWASP ZAP** analiza la API ya publicada (DAST, modo
+  baseline, pasivo). El informe queda como artefacto de la ejecucion
+  (`zap-report`) y no como issue, porque el repositorio es publico
 
 Las pull requests construyen la imagen para validar el Dockerfile, pero nunca
 publican. Como cada compilacion queda etiquetada por SHA, cualquier version
 anterior se puede volver a desplegar tal cual, sin recompilar: en local con
 `IMAGE_TAG` en el compose de produccion, y en Azure cambiando la etiqueta del
 contenedor.
+
+El propio workflow esta acotado: el `GITHUB_TOKEN` es de solo lectura por
+defecto y solo los jobs que lo necesitan piden mas permisos; cada job tiene un
+tiempo maximo, para que uno colgado no consuma minutos durante horas; y solo hay
+un despliegue a produccion a la vez (`concurrency`), sin cancelar el que esta en
+curso.
 
 Dependabot abre cada mes una pull request con las actualizaciones menores y de
 parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
@@ -426,7 +436,7 @@ servidor Azure SQL y base de datos serverless. Los recursos ya existian y se
 
 ```mermaid
 flowchart LR
-    PR[Pull request] --> CHECK[fmt + validate]
+    PR[Pull request] --> CHECK[fmt + validate<br/>+ escaneo Trivy]
     CHECK --> PLAN[terraform plan<br/>OIDC, solo lectura]
     PLAN --> COMMENT[Comentario resumen<br/>en la PR]
     COMMENT --> MERGE[Merge a master]
@@ -451,6 +461,13 @@ flowchart LR
   `sql_admin_password_version`.
 - **Protecciones:** `prevent_destroy` en el grupo de recursos, el servidor SQL y
   la base de datos.
+- **Escaneo de seguridad** con Trivy (`trivy config`) en cada push y pull
+  request: busca malas configuraciones (acceso publico, TLS, cifrado...) y falla
+  con hallazgos altos o criticos, lo que tambien bloquea el despliegue. Las
+  excepciones son decisiones conscientes, como lo que el plan gratuito no
+  permite, y quedan documentadas con su motivo en `terraform/.trivyignore`.
+- **Identidad administrada** en la web app: la base para leer secretos de Key
+  Vault y conectarse a SQL sin contrasena.
 - **Reparto claro con el pipeline:** Terraform gestiona la infraestructura; el job
   `deploy` gestiona la imagen del contenedor (que Terraform ignora), asi que
   nunca se pisan.
