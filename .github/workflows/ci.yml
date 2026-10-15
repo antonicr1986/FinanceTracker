@@ -368,7 +368,9 @@ jobs:
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ needs.deploy.outputs.webapp-url }}
-          rules_file_name: '.zap/rules.tsv'
+          # Las reglas se pasan con -c a mano: la action solo usa rules_file_name
+          # si el archivo tiene alguna regla IGNORE, y aqui todas son INFO.
+          cmd_options: '-c .zap/rules.tsv'
           fail_action: true
           allow_issue_writing: false
           artifact_name: zap-report
@@ -431,7 +433,9 @@ jobs:
         with:
           target: http://localhost:8080/swagger/v1/swagger.json
           format: openapi
-          rules_file_name: '.zap/rules.tsv'
+          # Las reglas se pasan con -c a mano: la action solo usa rules_file_name
+          # si el archivo tiene alguna regla IGNORE, y aqui todas son INFO.
+          cmd_options: '-c .zap/rules.tsv'
           fail_action: true
           allow_issue_writing: false
           artifact_name: zap-api-report
