@@ -35,6 +35,11 @@ public static class SecurityHeaders
 
             // Son datos de cada usuario: que ninguna cache intermedia los guarde.
             headers["Cache-Control"] = "no-store";
+
+            // Ninguna otra web puede incrustar estas respuestas (img, script...).
+            // No afecta a los clientes: la web usa fetch con CORS, que no la
+            // comprueba, y las apps de Android y Windows no son navegadores.
+            headers["Cross-Origin-Resource-Policy"] = "same-origin";
         }
     }
 }

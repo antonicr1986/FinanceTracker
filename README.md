@@ -364,11 +364,31 @@ On pushes to `master` it additionally:
 - Tags it with the full commit SHA and with `latest`
 - Deploys that very same image to Azure App Service, by its SHA tag: production
   runs exactly what was scanned, with no rebuild. It only happens once **every**
-  check passes: tests, image scan, secret scan, and infrastructure validation
-  and security scan. If any of them fails, nothing is deployed
-- After the deployment, **OWASP ZAP** scans the published API (DAST, passive
-  baseline mode). The report is kept as a run artifact (`zap-report`) rather
-  than an issue, because the repository is public
+  check passes: tests, image scan, secret scan, infrastructure validation and
+  security scan, and the active DAST of the API (see below). If any of them
+  fails, nothing is deployed
+- After the deployment, **OWASP ZAP** reviews the published API (passive DAST,
+  baseline mode) and the pipeline fails if a new alert shows up
+
+**Active DAST of the API (`dast-api` job).** On every push and pull request,
+the workflow starts a **throwaway** API and SQL Server on the runner with
+`docker compose` and random keys, signs in with the demo account and runs the
+**OWASP ZAP** API scan from `swagger.json`: it attacks every endpoint,
+including the ones that require a JWT, with injections, malformed input and
+unauthorised requests. These are real attacks, which is why they never target
+production. If ZAP finds anything new, the job fails and **nothing is
+deployed**. Expected findings (such as validation 400s) are listed in
+`.zap/rules.tsv` as informational, each with its reason: they still appear in
+the report but do not block. The reports are kept as run artifacts
+(`zap-report` and `zap-api-report`) rather than issues, because the
+repository is public.
+
+**Security headers.** Every response carries HSTS, `X-Content-Type-Options`,
+`X-Frame-Options` and `Referrer-Policy`; API responses also get a
+`default-src 'none'` CSP, `Cache-Control: no-store` and
+`Cross-Origin-Resource-Policy` (see `Middleware/SecurityHeaders.cs`). HSTS is
+added by hand because TLS is terminated by Azure and requests reach the
+container over plain HTTP.
 
 Pull requests build the image to validate the Dockerfile, but never publish. Because
 every build is tagged by commit SHA, any previous version can be redeployed as-is,

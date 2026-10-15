@@ -19,9 +19,9 @@ devuelven 404. No vio ningún endpoint real.
 - [x] **Job `dast-api`**: ZAP `action-api-scan` activo y autenticado (cuenta demo) contra una
   API + SQL Server desechables levantados con `docker compose` en el runner, a partir del
   `swagger.json`. Nunca ataca producción.
-- [ ] **Pasar `fail_action` a `true`** en `dast` y `dast-api` cuando los informes salgan limpios, y
-  añadir `dast-api` al `needs` de `deploy`, para que un hallazgo nuevo bloquee el despliegue. Los falsos
-  positivos se excluyen en `.zap/rules.tsv` (`rules_file_name` en el job).
+- [x] **`fail_action: true`** en `dast` y `dast-api`, y `deploy` depende de `dast-api`: un hallazgo
+  nuevo bloquea el despliegue. Riesgos aceptados como INFO en `.zap/rules.tsv`, con su motivo.
+- [x] `Cross-Origin-Resource-Policy: same-origin` en las respuestas de la API (alerta 90004).
 
 ## Pipeline (`ci.yml`)
 

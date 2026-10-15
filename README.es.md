@@ -358,11 +358,31 @@ En los push a `master`, ademas:
 - Despliega en Azure App Service esa misma imagen, por su etiqueta SHA:
   produccion ejecuta exactamente lo que se ha escaneado, sin volver a compilar.
   Solo ocurre si pasan **todos** los controles: pruebas, escaneo de la imagen,
-  escaneo de secretos y validacion y escaneo de seguridad de la infraestructura.
-  Si cualquiera falla, no se despliega nada
-- Tras el despliegue, **OWASP ZAP** analiza la API ya publicada (DAST, modo
-  baseline, pasivo). El informe queda como artefacto de la ejecucion
-  (`zap-report`) y no como issue, porque el repositorio es publico
+  escaneo de secretos, validacion y escaneo de seguridad de la infraestructura
+  y el DAST activo de la API (ver mas abajo). Si cualquiera falla, no se
+  despliega nada
+- Tras el despliegue, **OWASP ZAP** revisa la API ya publicada (DAST pasivo,
+  modo baseline) y el pipeline falla si aparece una alerta nueva
+
+**DAST activo de la API (job `dast-api`).** En cada push y pull request, el
+workflow levanta en el runner una API y un SQL Server **desechables** con
+`docker compose` y claves aleatorias, inicia sesion con la cuenta demo y lanza
+el escaneo de API de **OWASP ZAP** a partir del `swagger.json`: ataca todos los
+endpoints, tambien los que exigen JWT, con inyecciones, entradas malformadas y
+peticiones sin permiso. Son ataques reales, por eso nunca se hacen contra
+produccion. Si ZAP encuentra algo nuevo, el job falla y **no se despliega**.
+Los avisos esperados (por ejemplo, los 400 de validacion) estan en
+`.zap/rules.tsv` como informativos, cada uno con su motivo: siguen saliendo en
+el informe, pero no bloquean. Los informes quedan como artefactos de la
+ejecucion (`zap-report` y `zap-api-report`) y no como issues, porque el
+repositorio es publico.
+
+**Cabeceras de seguridad.** Todas las respuestas llevan HSTS,
+`X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy`; las de la API,
+ademas, una CSP `default-src 'none'`, `Cache-Control: no-store` y
+`Cross-Origin-Resource-Policy` (ver `Middleware/SecurityHeaders.cs`). HSTS se
+anade a mano porque el TLS lo termina Azure y dentro del contenedor la peticion
+llega por HTTP.
 
 Las pull requests construyen la imagen para validar el Dockerfile, pero nunca
 publican. Como cada compilacion queda etiquetada por SHA, cualquier version

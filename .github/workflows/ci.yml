@@ -290,10 +290,11 @@ jobs:
 
   # Despliegue a Azure App Service. Solo en push a master y solo si TODOS los
   # controles han pasado: tests, escaneo de la imagen (docker), escaneo de
-  # secretos (secrets) y validacion y escaneo de seguridad de la
-  # infraestructura (terraform). Si cualquiera falla, no se despliega.
+  # secretos (secrets), validacion y escaneo de seguridad de la
+  # infraestructura (terraform) y DAST activo de la API (dast-api). Si
+  # cualquiera falla, no se despliega.
   deploy:
-    needs: [build-and-test, docker, secrets, terraform]
+    needs: [build-and-test, docker, secrets, terraform, dast-api]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     # Incluye hasta ~15 min de reintentos del smoke test
@@ -348,9 +349,9 @@ jobs:
   # con OWASP ZAP en modo baseline (no destructivo): cabeceras de
   # seguridad que faltan, cookies inseguras, informacion expuesta en errores...
   # Va despues del smoke test, asi que la API ya esta arrancada.
-  #  - fail_action: false de momento, para ver que encuentra sin bloquear.
-  #    Cuando este limpio, se pasa a true y se ignoran los falsos positivos
-  #    en .zap/rules.tsv.
+  #  - fail_action: true: cualquier alerta nueva pone el pipeline en rojo. Los
+  #    riesgos aceptados estan en .zap/rules.tsv como INFO (salen en el
+  #    informe pero no fallan), cada uno con su motivo.
   #  - allow_issue_writing: false porque el repo es publico: el informe NO se
   #    publica como issue (seria una lista de debilidades a la vista de todos),
   #    solo como artefacto de la ejecucion. Asi ademas basta con permiso de
@@ -367,7 +368,8 @@ jobs:
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ needs.deploy.outputs.webapp-url }}
-          fail_action: false
+          rules_file_name: '.zap/rules.tsv'
+          fail_action: true
           allow_issue_writing: false
           artifact_name: zap-report
 
@@ -378,8 +380,10 @@ jobs:
   # secretos aleatorios que solo existen durante esta ejecucion.
   #  - Se autentica con la cuenta demo, que la API siembra al arrancar, para
   #    llegar tambien a los endpoints que exigen JWT.
-  #  - fail_action: false de momento; el informe queda como artefacto
-  #    (zap-api-report), no como issue, porque el repo es publico.
+  #  - fail_action: true y deploy depende de este job: si ZAP encuentra algo
+  #    nuevo, no se despliega. Riesgos aceptados en .zap/rules.tsv (INFO).
+  #  - El informe queda como artefacto (zap-api-report), no como issue,
+  #    porque el repo es publico.
   dast-api:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -427,7 +431,8 @@ jobs:
         with:
           target: http://localhost:8080/swagger/v1/swagger.json
           format: openapi
-          fail_action: false
+          rules_file_name: '.zap/rules.tsv'
+          fail_action: true
           allow_issue_writing: false
           artifact_name: zap-api-report
 

@@ -34,6 +34,7 @@ public class SecurityHeadersTests
 
         Assert.Equal("default-src 'none'; frame-ancestors 'none'", headers["Content-Security-Policy"]);
         Assert.Equal("no-store", headers["Cache-Control"]);
+        Assert.Equal("same-origin", headers["Cross-Origin-Resource-Policy"]);
     }
 
     [Fact]
