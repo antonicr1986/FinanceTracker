@@ -9,19 +9,18 @@ Contexto: el primer informe de ZAP (baseline contra la raíz de la API) salió c
 0 High y 0 Medium, pero solo probó `/`, `/robots.txt` y `/sitemap.xml`, que
 devuelven 404. No vio ningún endpoint real.
 
-- [ ] **Cabeceras de seguridad en `Program.cs`** (alertas 10035 y 10049 de ZAP).
-  Middleware propio justo después de `app.UseExceptionHandler()`:
-  `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
-  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` y
-  `Cache-Control: no-store` (excepto en `/swagger`).
-  - `app.UseHsts()` no sirve: el TLS lo termina Azure y dentro del contenedor la
-    petición llega por HTTP, así que no añadiría la cabecera.
-  - Sin `Content-Security-Policy` de momento: rompería Swagger UI (scripts inline).
-  - Comprobar en local `dotnet build` y `dotnet format --verify-no-changes`.
-- [ ] **Cambiar el job `dast` a `zaproxy/action-api-scan`** usando
-  `/swagger/v1/swagger.json` (`format: openapi`), para que ZAP pruebe todos los
-  endpoints.
-- [ ] **Pasar `fail_action` a `true`** cuando el informe salga limpio. Los falsos
+- [x] **Cabeceras de seguridad** (`Middleware/SecurityHeaders.cs`): HSTS, `nosniff`,
+  `X-Frame-Options`, `Referrer-Policy`, y en las respuestas de la API (no en Swagger)
+  `Content-Security-Policy: default-src 'none'` y `Cache-Control: no-store`. Sin cabecera
+  `Server`. Con tests.
+- [x] **Corregido `GET /api/Users/{id}`**: no exigía sesión y devolvía el nombre y el email de
+  cualquier usuario por su id (BOLA/IDOR, OWASP API1). Ahora exige JWT y solo devuelve el
+  propio usuario (404 con un id ajeno). Con tests.
+- [x] **Job `dast-api`**: ZAP `action-api-scan` activo y autenticado (cuenta demo) contra una
+  API + SQL Server desechables levantados con `docker compose` en el runner, a partir del
+  `swagger.json`. Nunca ataca producción.
+- [ ] **Pasar `fail_action` a `true`** en `dast` y `dast-api` cuando los informes salgan limpios, y
+  añadir `dast-api` al `needs` de `deploy`, para que un hallazgo nuevo bloquee el despliegue. Los falsos
   positivos se excluyen en `.zap/rules.tsv` (`rules_file_name` en el job).
 
 ## Pipeline (`ci.yml`)

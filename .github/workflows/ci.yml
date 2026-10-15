@@ -344,8 +344,8 @@ jobs:
           echo "::error::La API no responde correctamente en $APP_URL/health/ready"
           exit 1
 
-  # DAST: ataca la API ya desplegada desde fuera, como haria un atacante,
-  # con OWASP ZAP en modo baseline (pasivo, no destructivo): cabeceras de
+  # DAST pasivo de produccion: revisa la API ya desplegada desde fuera,
+  # con OWASP ZAP en modo baseline (no destructivo): cabeceras de
   # seguridad que faltan, cookies inseguras, informacion expuesta en errores...
   # Va despues del smoke test, asi que la API ya esta arrancada.
   #  - fail_action: false de momento, para ver que encuentra sin bloquear.
@@ -370,3 +370,67 @@ jobs:
           fail_action: false
           allow_issue_writing: false
           artifact_name: zap-report
+
+  # DAST activo y autenticado de la API: ZAP lee el swagger.json y ataca TODOS
+  # los endpoints (inyecciones, cabeceras, errores que revelan informacion...).
+  # Como son ataques reales, NO se hace contra produccion: se levanta la API y
+  # un SQL Server desechables en el propio runner (docker compose), con
+  # secretos aleatorios que solo existen durante esta ejecucion.
+  #  - Se autentica con la cuenta demo, que la API siembra al arrancar, para
+  #    llegar tambien a los endpoints que exigen JWT.
+  #  - fail_action: false de momento; el informe queda como artefacto
+  #    (zap-api-report), no como issue, porque el repo es publico.
+  dast-api:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Arrancar la API y SQL Server desechables
+        run: |
+          jwt_key=$(openssl rand -hex 32)
+          sa_secret="Aa1-$(openssl rand -hex 16)"
+          echo "::add-mask::$jwt_key"
+          echo "::add-mask::$sa_secret"
+          JWT_KEY="$jwt_key" MSSQL_SA_PASSWORD="$sa_secret" docker compose up -d --build
+
+      - name: Esperar a que la API este lista
+        run: |
+          for i in $(seq 1 40); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:8080/health/ready || true)
+            echo "Intento $i: HTTP $status"
+            if [ "$status" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::La API desechable no ha arrancado"
+          docker compose logs api | tail -100
+          exit 1
+
+      - name: Iniciar sesion con la cuenta demo
+        run: |
+          token=$(curl -s -X POST http://localhost:8080/api/Users/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"demo@financetracker.app","password":"Demo1234!"}' | jq -r .token) # gitleaks:allow
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "::error::No se pudo iniciar sesion con la cuenta demo"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "ZAP_AUTH_HEADER_VALUE=Bearer $token" >> "$GITHUB_ENV"
+
+      - name: OWASP ZAP API scan
+        uses: zaproxy/action-api-scan@v0.10.0
+        env:
+          ZAP_AUTH_HEADER: Authorization
+          ZAP_AUTH_HEADER_SITE: localhost
+        with:
+          target: http://localhost:8080/swagger/v1/swagger.json
+          format: openapi
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: zap-api-report
+
+      - name: Apagar el entorno
+        if: always()
+        run: docker compose down -v

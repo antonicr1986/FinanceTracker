@@ -15,6 +15,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Sin cabecera "Server: Kestrel": no hace falta anunciar con que esta hecha la API.
+builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+
 // Origenes permitidos por CORS, separados por comas. Viven en configuracion y
 // no en el codigo para poder anadir un dominio desde los ajustes del App
 // Service sin recompilar ni volver a desplegar.
@@ -167,6 +170,10 @@ using (var scope = app.Services.CreateScope())
 // El manejador de excepciones va el primero: envuelve a todo lo que viene
 // detras, asi ningun error se escapa sin quedar registrado.
 app.UseExceptionHandler();
+
+// Cabeceras de seguridad (HSTS, nosniff, CSP...) en todas las respuestas,
+// tambien en las de error. Ver Middleware/SecurityHeaders.cs.
+app.UseSecurityHeaders();
 
 // Una linea por peticion: metodo, ruta, codigo de estado y duracion.
 app.UseSerilogRequestLogging();
