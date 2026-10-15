@@ -22,11 +22,19 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Permisos minimos por defecto para el GITHUB_TOKEN en todos los jobs: solo
+# lectura del codigo. Los jobs que necesitan mas (docker, terraform-plan) lo
+# declaran ellos mismos y solo para ellos.
+permissions:
+  contents: read
+
 jobs:
-  # Comprueba la infraestructura como codigo sin tocar Azure: formato y
-  # validacion de la sintaxis y los tipos. No necesita credenciales.
+  # Comprueba la infraestructura como codigo sin tocar Azure: formato,
+  # validacion de la sintaxis y los tipos, y escaneo de seguridad.
+  # No necesita credenciales.
   terraform:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: terraform
@@ -39,6 +47,27 @@ jobs:
         run: terraform init -backend=false -input=false
       - name: terraform validate
         run: terraform validate
+
+      # Trivy se instala desde el repositorio oficial de Aqua Security
+      # (paquete firmado), igual que en el job docker
+      - name: Install Trivy
+        run: |
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq trivy
+
+      # fmt y validate solo comprueban que el codigo es correcto, no que la
+      # infraestructura sea segura. Este escaneo busca malas configuraciones:
+      # acceso publico a SQL, HTTPS o TLS no forzados, reglas de red abiertas...
+      # Falla con hallazgos ALTOS o CRITICOS. Si alguno es una decision
+      # consciente, se documenta y se excluye en terraform/.trivyignore.
+      - name: IaC security scan
+        run: |
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            .
 
   # terraform plan contra Azure en cada PR, para ver ANTES de fusionar que
   # cambiaria en la infraestructura. Solo lectura:
@@ -57,6 +86,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       id-token: write       # token OIDC para Azure
       contents: read
@@ -126,6 +156,7 @@ jobs:
   # No depende del build: si hay una fuga, da igual que compile.
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -143,6 +174,7 @@ jobs:
 
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -181,6 +213,7 @@ jobs:
   docker:
     needs: build-and-test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -255,16 +288,28 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
 
-  # Despliegue a Azure App Service. Solo en push a master y solo si los tests
-  # pasan y el escaneo de la imagen (job docker) tambien: si Trivy encuentra
-  # una vulnerabilidad, no se publica la imagen ni se despliega el codigo.
+  # Despliegue a Azure App Service. Solo en push a master y solo si TODOS los
+  # controles han pasado: tests, escaneo de la imagen (docker), escaneo de
+  # secretos (secrets) y validacion y escaneo de seguridad de la
+  # infraestructura (terraform). Si cualquiera falla, no se despliega.
   deploy:
-    needs: [build-and-test, docker]
+    needs: [build-and-test, docker, secrets, terraform]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Incluye hasta ~15 min de reintentos del smoke test
+    timeout-minutes: 25
+    # Un solo despliegue a produccion a la vez. Si llegan dos pushes seguidos,
+    # el segundo espera a que termine el primero (no lo cancela: cortar un
+    # despliegue a medias podria dejar la app en un estado inconsistente).
+    concurrency:
+      group: production
+      cancel-in-progress: false
     environment:
       name: production
       url: ${{ steps.deploy.outputs.webapp-url }}
+    # La URL desplegada se expone para que el job dast sepa que escanear
+    outputs:
+      webapp-url: ${{ steps.deploy.outputs.webapp-url }}
     steps:
       # Azure ejecuta la MISMA imagen que se acaba de escanear con Trivy y
       # publicar en GHCR, identificada por el SHA del commit: no se vuelve a
@@ -298,3 +343,30 @@ jobs:
           done
           echo "::error::La API no responde correctamente en $APP_URL/health/ready"
           exit 1
+
+  # DAST: ataca la API ya desplegada desde fuera, como haria un atacante,
+  # con OWASP ZAP en modo baseline (pasivo, no destructivo): cabeceras de
+  # seguridad que faltan, cookies inseguras, informacion expuesta en errores...
+  # Va despues del smoke test, asi que la API ya esta arrancada.
+  #  - fail_action: false de momento, para ver que encuentra sin bloquear.
+  #    Cuando este limpio, se pasa a true y se ignoran los falsos positivos
+  #    en .zap/rules.tsv.
+  #  - allow_issue_writing: false porque el repo es publico: el informe NO se
+  #    publica como issue (seria una lista de debilidades a la vista de todos),
+  #    solo como artefacto de la ejecucion. Asi ademas basta con permiso de
+  #    solo lectura.
+  dast:
+    needs: deploy
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ needs.deploy.outputs.webapp-url }}
+          fail_action: false
+          allow_issue_writing: false
+          artifact_name: zap-report
