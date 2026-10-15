@@ -53,7 +53,8 @@ devuelven 404. No vio ningún endpoint real.
 - [ ] **Key Vault** para `Jwt__Key` y la cadena de conexión, con Key Vault
   references y la managed identity de la Web App (ya creada).
 - [ ] **SQL sin contraseña**: autenticación Microsoft Entra con la managed identity.
-- [ ] Monitorización: Application Insights y alertas (health check, picos de 401/403/500).
+- [x] Monitorización: Application Insights (OpenTelemetry) y alertas por email de 5xx y picos de 401/403 (`terraform/monitoring.tf`).
+- [ ] Enviar la auditoría de SQL al mismo Log Analytics y quitar AZU-0027 de `.trivyignore`.
 - [ ] Revisar las exclusiones de `terraform/.trivyignore` si se sube de plan (AZU-0022, AZU-0027).
 
 ## Hecho

@@ -492,6 +492,24 @@ flowchart LR
   `deploy` gestiona la imagen del contenedor (que Terraform ignora), asi que
   nunca se pisan.
 
+## 📈 Observabilidad (Azure Monitor)
+
+La API envia su telemetria a **Application Insights** con **OpenTelemetry**
+(`Azure.Monitor.OpenTelemetry.AspNetCore`): cada peticion con su endpoint,
+codigo y duracion, las llamadas salientes, las excepciones y los logs de
+Serilog. Solo se activa si existe `APPLICATIONINSIGHTS_CONNECTION_STRING`, asi
+que en local, en los tests y en el entorno desechable del DAST no envia nada.
+
+Todo esta en Terraform ([`terraform/monitoring.tf`](terraform/monitoring.tf)):
+
+- **Log Analytics Workspace** con 30 dias de retencion y un **tope de ingesta
+  diaria**, para no salir nunca del nivel gratuito.
+- **Application Insights** sobre ese workspace.
+- **Alertas por email** sobre las metricas de la Web App: mas de 5 errores
+  **5xx** en 5 minutos, y **picos de 401 y 403**, la huella tipica de un
+  ataque de fuerza bruta contra el login o de alguien probando a entrar donde
+  no debe.
+
 ## 🧪 Ejecutar las pruebas
 
 Desde el explorador de pruebas de Visual Studio o con:

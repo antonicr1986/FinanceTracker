@@ -5,6 +5,7 @@ using FinanceTracker.Api.Services;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Infrastructure.Data;
 using FinanceTracker.Infrastructure.Services;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -39,10 +40,25 @@ builder.Services.AddCors(options =>
 // Serilog sustituye al sistema de logs por defecto. Su configuracion vive en
 // appsettings.json, no aqui: asi se puede cambiar el nivel o el destino sin
 // recompilar ni volver a desplegar.
+//
+// writeToProviders: true hace que los logs de Serilog lleguen tambien a los
+// proveedores de logging de .NET, entre ellos el de OpenTelemetry, y de ahi a
+// Application Insights.
 builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
-    .Enrich.FromLogContext());
+    .Enrich.FromLogContext(),
+    writeToProviders: true);
+
+// Observabilidad con Azure Monitor / Application Insights via OpenTelemetry:
+// peticiones (endpoint, codigo, duracion), llamadas salientes, excepciones y
+// logs. Solo se activa si existe APPLICATIONINSIGHTS_CONNECTION_STRING (en
+// Azure, como app setting): en local, en los tests y en el entorno
+// desechable del DAST no envia nada.
+if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
+{
+    builder.Services.AddOpenTelemetry().UseAzureMonitor();
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(

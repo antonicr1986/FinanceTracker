@@ -81,3 +81,21 @@ variable "sql_admin_password_version" {
   type        = number
   default     = 1 # 1: primera rotacion (octubre de 2026)
 }
+
+variable "log_analytics_name" {
+  type    = string
+  default = "financetracker-logs"
+}
+
+variable "app_insights_name" {
+  type    = string
+  default = "financetracker-api-insights"
+}
+
+# Sin valor por defecto a proposito: el repo es publico. En local va en
+# terraform.tfvars (ignorado en git) y en el CI en la variable de GitHub
+# ALERT_EMAIL.
+variable "alert_email" {
+  description = "Email que recibe las alertas de Azure Monitor."
+  type        = string
+}

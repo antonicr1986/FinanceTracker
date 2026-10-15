@@ -495,6 +495,23 @@ flowchart LR
   `deploy` job owns the container image (ignored by Terraform), so they never
   fight over the same setting.
 
+## 📈 Observability (Azure Monitor)
+
+The API sends its telemetry to **Application Insights** with **OpenTelemetry**
+(`Azure.Monitor.OpenTelemetry.AspNetCore`): every request with its endpoint,
+status code and duration, outgoing calls, exceptions and the Serilog logs. It
+is only enabled when `APPLICATIONINSIGHTS_CONNECTION_STRING` exists, so
+nothing is sent locally, in tests or in the throwaway DAST environment.
+
+Everything is in Terraform ([`terraform/monitoring.tf`](terraform/monitoring.tf)):
+
+- **Log Analytics Workspace** with 30-day retention and a **daily ingestion
+  cap**, so it never leaves the free tier.
+- **Application Insights** on top of that workspace.
+- **Email alerts** on the Web App metrics: more than 5 **5xx** errors in 5
+  minutes, and **spikes of 401s and 403s**, the typical footprint of a brute
+  force attack on the login or someone probing where they should not be.
+
 ## 🧪 Running Tests
 
 Tests can be executed from Visual Studio Test Explorer or with:
