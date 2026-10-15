@@ -25,6 +25,7 @@ public class SecurityHeadersTests
         Assert.Equal("nosniff", headers["X-Content-Type-Options"]);
         Assert.Equal("DENY", headers["X-Frame-Options"]);
         Assert.Equal("no-referrer", headers["Referrer-Policy"]);
+        Assert.Equal("same-origin", headers["Cross-Origin-Resource-Policy"]);
     }
 
     [Fact]
@@ -34,7 +35,6 @@ public class SecurityHeadersTests
 
         Assert.Equal("default-src 'none'; frame-ancestors 'none'", headers["Content-Security-Policy"]);
         Assert.Equal("no-store", headers["Cache-Control"]);
-        Assert.Equal("same-origin", headers["Cross-Origin-Resource-Policy"]);
     }
 
     [Fact]
