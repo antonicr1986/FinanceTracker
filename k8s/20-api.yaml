@@ -19,7 +19,15 @@ metadata:
   name: api
   namespace: financetracker
 spec:
-  replicas: 1
+  # Dos copias: si una cae o se esta actualizando, la otra sigue atendiendo.
+  replicas: 2
+  # Rolling update: al cambiar la imagen, crea un pod nuevo, espera a que este
+  # listo (readiness) y solo entonces retira uno viejo. Nunca baja de 2 listos.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: api
@@ -33,6 +41,40 @@ spec:
           image: ghcr.io/antonicr1986/financetracker:latest
           ports:
             - containerPort: 8080
+          # Recursos: "requests" es lo que el planificador reserva para el pod;
+          # "limits" es el maximo. Si supera la memoria, Kubernetes lo reinicia.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              memory: "512Mi"
+          # startupProbe: da margen al arranque (migraciones incluidas) antes
+          # de que empiecen las otras dos sondas. Hasta 30 x 5s = 150s.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+          # livenessProbe: "esta vivo el proceso?". Si falla 3 veces seguidas,
+          # Kubernetes REINICIA el contenedor. No mira la base de datos: si SQL
+          # cae, reiniciar la API no arreglaria nada.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+          # readinessProbe: "puede atender trafico?". Incluye la base de datos.
+          # Si falla, el pod NO se reinicia: el Service deja de enviarle
+          # peticiones hasta que vuelva a estar listo.
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 3
           # Variables no sensibles desde el ConfigMap...
           envFrom:
             - configMapRef:
