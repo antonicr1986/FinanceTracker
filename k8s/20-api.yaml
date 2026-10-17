@@ -1,0 +1,67 @@
+# La API de FinanceTracker: la MISMA imagen que publica el pipeline en GHCR.
+#
+# Secretos (cadena de conexion y clave JWT) en el Secret "api-secret", que se
+# crea con kubectl y no se sube a Git. La configuracion no sensible, aqui.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: financetracker
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+---
+# Deployment: mantiene N copias (replicas) de la API vivas y las actualiza
+# sin corte cuando cambia la imagen.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: financetracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/antonicr1986/financetracker:latest
+          ports:
+            - containerPort: 8080
+          # Variables no sensibles desde el ConfigMap...
+          envFrom:
+            - configMapRef:
+                name: api-config
+          # ...y las sensibles desde el Secret. El doble guion bajo (__) es
+          # como .NET lee secciones anidadas: ConnectionStrings:DefaultConnection.
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: ConnectionStrings__DefaultConnection
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Jwt__Key
+---
+# Service: nombre e IP estables delante de los pods de la API. Reparte el
+# trafico entre las replicas que esten listas.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: financetracker
+spec:
+  selector:
+    app: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
