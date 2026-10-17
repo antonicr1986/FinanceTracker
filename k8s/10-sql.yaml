@@ -1,0 +1,84 @@
+# SQL Server dentro del cluster.
+#
+# La contrasena NO esta aqui: viene del Secret "sql-secret", que se crea con
+# kubectl (ver k8s/README.md) y nunca se sube a Git.
+
+# Service "headless" (clusterIP: None): da a la base de datos un nombre DNS
+# estable, "sql", igual que el nombre "db" del docker-compose.
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql
+  namespace: financetracker
+spec:
+  clusterIP: None
+  selector:
+    app: sql
+  ports:
+    - name: mssql
+      port: 1433
+---
+# StatefulSet en lugar de Deployment: es lo que se usa para bases de datos.
+# Cada pod tiene identidad fija (sql-0) y su propio disco persistente, que
+# sobrevive aunque el pod se borre o se recree.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sql
+  namespace: financetracker
+spec:
+  serviceName: sql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql
+  template:
+    metadata:
+      labels:
+        app: sql
+    spec:
+      securityContext:
+        fsGroup: 10001   # usuario "mssql" de la imagen, para poder escribir en el disco
+      containers:
+        - name: mssql
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sql-secret
+                  key: MSSQL_SA_PASSWORD
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "3Gi"
+          # Equivale al healthcheck del docker-compose: el pod no se marca
+          # "listo" hasta que SQL Server responde a una consulta.
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: mssql-data
+              mountPath: /var/opt/mssql
+  # Un disco persistente por pod (PersistentVolumeClaim), como el volumen
+  # mssql-data del compose.
+  volumeClaimTemplates:
+    - metadata:
+        name: mssql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

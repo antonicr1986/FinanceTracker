@@ -1,0 +1,109 @@
+# La API de FinanceTracker: la MISMA imagen que publica el pipeline en GHCR.
+#
+# Secretos (cadena de conexion y clave JWT) en el Secret "api-secret", que se
+# crea con kubectl y no se sube a Git. La configuracion no sensible, aqui.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: financetracker
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+---
+# Deployment: mantiene N copias (replicas) de la API vivas y las actualiza
+# sin corte cuando cambia la imagen.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: financetracker
+spec:
+  # Dos copias: si una cae o se esta actualizando, la otra sigue atendiendo.
+  replicas: 2
+  # Rolling update: al cambiar la imagen, crea un pod nuevo, espera a que este
+  # listo (readiness) y solo entonces retira uno viejo. Nunca baja de 2 listos.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/antonicr1986/financetracker:latest
+          ports:
+            - containerPort: 8080
+          # Recursos: "requests" es lo que el planificador reserva para el pod;
+          # "limits" es el maximo. Si supera la memoria, Kubernetes lo reinicia.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              memory: "512Mi"
+          # startupProbe: da margen al arranque (migraciones incluidas) antes
+          # de que empiecen las otras dos sondas. Hasta 30 x 5s = 150s.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+          # livenessProbe: "esta vivo el proceso?". Si falla 3 veces seguidas,
+          # Kubernetes REINICIA el contenedor. No mira la base de datos: si SQL
+          # cae, reiniciar la API no arreglaria nada.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+          # readinessProbe: "puede atender trafico?". Incluye la base de datos.
+          # Si falla, el pod NO se reinicia: el Service deja de enviarle
+          # peticiones hasta que vuelva a estar listo.
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 3
+          # Variables no sensibles desde el ConfigMap...
+          envFrom:
+            - configMapRef:
+                name: api-config
+          # ...y las sensibles desde el Secret. El doble guion bajo (__) es
+          # como .NET lee secciones anidadas: ConnectionStrings:DefaultConnection.
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: ConnectionStrings__DefaultConnection
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret
+                  key: Jwt__Key
+---
+# Service: nombre e IP estables delante de los pods de la API. Reparte el
+# trafico entre las replicas que esten listas.
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: financetracker
+spec:
+  selector:
+    app: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

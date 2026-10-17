@@ -1,0 +1,6 @@
+# Todo FinanceTracker vive en su propio namespace: se puede listar, limpiar
+# o borrar entero sin tocar nada mas del cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: financetracker
