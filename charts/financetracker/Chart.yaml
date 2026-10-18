@@ -1,0 +1,8 @@
+apiVersion: v2
+name: financetracker
+description: API de FinanceTracker (.NET 8) con SQL Server, para cualquier cluster de Kubernetes.
+type: application
+# Version del chart (las plantillas). Se sube cuando cambian.
+version: 0.2.0
+# Version de la aplicacion que despliega por defecto.
+appVersion: "latest"

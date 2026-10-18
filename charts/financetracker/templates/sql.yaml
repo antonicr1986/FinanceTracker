@@ -1,0 +1,70 @@
+{{- if .Values.sql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql
+  labels:
+    {{- include "financetracker.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app: sql
+  ports:
+    - name: mssql
+      port: 1433
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sql
+  labels:
+    {{- include "financetracker.labels" . | nindent 4 }}
+spec:
+  serviceName: sql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sql
+  template:
+    metadata:
+      labels:
+        app: sql
+    spec:
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: mssql
+          image: {{ .Values.sql.image }}
+          ports:
+            - containerPort: 1433
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.sql }}
+                  key: MSSQL_SA_PASSWORD
+          resources:
+            {{- toYaml .Values.sql.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: mssql-data
+              mountPath: /var/opt/mssql
+  volumeClaimTemplates:
+    - metadata:
+        name: mssql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: {{ .Values.sql.storage }}
+{{- end }}
