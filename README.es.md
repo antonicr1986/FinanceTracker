@@ -94,6 +94,7 @@ espacios de los extremos.
 - Docker / Docker Compose
 - GitHub Container Registry (GHCR)
 - Terraform (infraestructura de Azure, estado remoto, OIDC)
+- Kubernetes / Helm (Deployment, StatefulSet, sondas, Ingress con Traefik)
 
 ## 🧱 Arquitectura
 
@@ -326,6 +327,63 @@ A diferencia del compose de desarrollo, este:
 Para desplegar un commit concreto en lugar de la ultima version:
 
 IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
+
+## ☸️ Kubernetes (Helm)
+
+La misma imagen que el pipeline publica en GHCR puede desplegarse en cualquier cluster de Kubernetes, empaquetada como chart de Helm en [`charts/financetracker`](charts/financetracker). Esta probado en un cluster local (Docker Desktop); la produccion sigue en Azure App Service.
+
+```mermaid
+flowchart LR
+    U[Navegador] --> T[Traefik · Ingress]
+    T --> S[Service api]
+    S --> A1[Pod API 1]
+    S --> A2[Pod API 2]
+    A1 --> DB[(SQL Server · StatefulSet + PVC)]
+    A2 --> DB
+```
+
+- **API como Deployment** con 2 replicas y actualizaciones sin corte (`maxUnavailable: 0`).
+- **Tres sondas**: startup (da margen a las migraciones), liveness en `/health` (reinicia un proceso colgado) y readiness en `/health/ready` (saca un pod del trafico si no llega a la base de datos, sin reiniciarlo).
+- **Un initContainer** espera a SQL Server antes de arrancar la API, para que nunca intente migrar contra una base de datos que no esta lista.
+- **SQL Server como StatefulSet** con volumen persistente: los datos sobreviven a borrar el pod e incluso a redesplegarlo desde cero.
+- **Los secretos no estan en Git**: el chart solo referencia Secrets que ya existen en el cluster.
+- **Ingress con Traefik**: se entra a la API por dominio, repartiendo entre las replicas listas.
+- `sql.enabled: false` despliega solo la API, apuntando a una base de datos externa como Azure SQL.
+
+### ▶️ Desplegar
+
+Requisitos: un cluster (`kubectl get nodes` → Ready), Helm y un Ingress controller (Traefik):
+
+```bash
+helm repo add traefik https://traefik.github.io/charts
+helm install traefik traefik/traefik -n traefik --create-namespace
+```
+
+Crear el namespace y los Secrets (nunca se suben a Git):
+
+```bash
+kubectl create namespace financetracker
+kubectl create secret generic sql-secret -n financetracker \
+  --from-literal=MSSQL_SA_PASSWORD='<contraseña-fuerte>'
+kubectl create secret generic api-secret -n financetracker \
+  --from-literal=ConnectionStrings__DefaultConnection='Server=sql;Database=FinanceTrackerDb;User Id=sa;Password=<contraseña-fuerte>;TrustServerCertificate=True' \
+  --from-literal=Jwt__Key="$(openssl rand -base64 48)"
+```
+
+Instalar el chart:
+
+```bash
+helm install financetracker charts/financetracker -n financetracker
+```
+
+Despues, abrir `http://financetracker.localhost/health/ready` y `http://financetracker.localhost/swagger`.
+
+Cualquier valor se cambia sin tocar las plantillas, y cada cambio se puede revertir:
+
+```bash
+helm upgrade financetracker charts/financetracker -n financetracker --set api.replicas=3
+helm rollback financetracker 1 -n financetracker
+```
 
 ## ⚙️ CI/CD
 

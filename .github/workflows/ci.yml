@@ -69,6 +69,22 @@ jobs:
             --exit-code 1 \
             .
 
+  # Valida el chart de Helm (despliegue en Kubernetes) sin necesitar un
+  # cluster: lint estricto y renderizado de las plantillas con los valores
+  # por defecto y con una base de datos externa (sql.enabled=false).
+  helm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: helm lint --strict charts/financetracker
+      - name: helm template (valores por defecto)
+        run: helm template financetracker charts/financetracker -n financetracker > /dev/null
+      - name: helm template (base de datos externa)
+        run: helm template financetracker charts/financetracker -n financetracker --set sql.enabled=false > /dev/null
+
   # terraform plan contra Azure en cada PR, para ver ANTES de fusionar que
   # cambiaria en la infraestructura. Solo lectura:
   #  - Entra en Azure por OIDC (sin secretos en GitHub) con una identidad que

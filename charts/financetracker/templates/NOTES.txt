@@ -1,0 +1,10 @@
+FinanceTracker desplegado en el namespace {{ .Release.Namespace }}.
+
+  Replicas de la API: {{ .Values.api.replicas }}
+  Imagen:             {{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}
+{{- if .Values.ingress.enabled }}
+  Salud:              http://{{ .Values.ingress.host }}/health/ready
+  Swagger:            http://{{ .Values.ingress.host }}/swagger
+{{- end }}
+
+Estado:  kubectl get pods -n {{ .Release.Namespace }}

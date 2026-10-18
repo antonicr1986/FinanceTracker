@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  labels:
+    {{- include "financetracker.labels" . | nindent 4 }}
+data:
+  ASPNETCORE_ENVIRONMENT: {{ .Values.api.environment | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels:
+    {{- include "financetracker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.api.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+      annotations:
+        # Si cambia el ConfigMap, cambia este hash y los pods se recrean solos.
+        checksum/config: {{ .Values.api.environment | sha256sum }}
+    spec:
+      {{- if .Values.sql.enabled }}
+      # initContainer: corre ANTES que la API y solo termina cuando SQL esta
+      # listo. Truco: el Service "sql" es headless, y su nombre DNS solo
+      # resuelve cuando el pod de SQL ha pasado su readinessProbe. Asi la API
+      # no arranca (ni intenta migrar) contra una base de datos que no responde.
+      initContainers:
+        - name: esperar-sql
+          image: {{ .Values.waitImage }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Esperando a que SQL Server este listo..."
+              until nslookup sql.{{ .Release.Namespace }}.svc.cluster.local > /dev/null 2>&1; do sleep 2; done
+              echo "SQL Server listo."
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+      {{- end }}
+      containers:
+        - name: api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 3
+          envFrom:
+            - configMapRef:
+                name: api-config
+          env:
+            - name: ConnectionStrings__DefaultConnection
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.api }}
+                  key: ConnectionStrings__DefaultConnection
+            - name: Jwt__Key
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.api }}
+                  key: Jwt__Key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels:
+    {{- include "financetracker.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

@@ -1,0 +1,47 @@
+# Valores por defecto del chart. Cualquiera se puede cambiar al instalar:
+#   helm install financetracker ./charts/financetracker --set api.replicas=3
+# o con un fichero propio:  -f mis-valores.yaml
+
+api:
+  image:
+    repository: ghcr.io/antonicr1986/financetracker
+    # Etiqueta de la imagen. En produccion conviene fijar un commit (sha-...),
+    # no "latest", para saber exactamente que version esta desplegada.
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicas: 2
+  environment: Production
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+sql:
+  # false = usar una base de datos externa (p. ej. Azure SQL): no se despliega
+  # SQL Server en el cluster y la cadena de conexion apunta fuera.
+  enabled: true
+  image: mcr.microsoft.com/mssql/server:2022-latest
+  storage: 5Gi
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 3Gi
+
+# Imagen minima del initContainer que espera a SQL antes de arrancar la API.
+waitImage: busybox:1.37
+
+# Los secretos NO van en este fichero ni en Git. El chart solo usa Secrets que
+# ya existen en el namespace (creados con kubectl, o en una empresa por
+# External Secrets / Key Vault). Aqui solo se dicen sus nombres.
+secrets:
+  sql: sql-secret        # clave: MSSQL_SA_PASSWORD
+  api: api-secret        # claves: ConnectionStrings__DefaultConnection, Jwt__Key
+
+ingress:
+  enabled: true
+  className: traefik
+  host: financetracker.localhost
