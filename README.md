@@ -93,6 +93,7 @@ spaces.
 - Docker / Docker Compose
 - GitHub Container Registry (GHCR)
 - Terraform (Azure infrastructure, remote state, OIDC)
+- Kubernetes / Helm (Deployment, StatefulSet, probes, Ingress with Traefik)
 
 ## 🧱 Architecture
 
@@ -335,6 +336,63 @@ Unlike the development compose file, this one:
 To deploy a specific commit rather than the latest build:
 
 IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
+
+## ☸️ Kubernetes (Helm)
+
+The same image the pipeline publishes to GHCR can also run on any Kubernetes cluster, packaged as a Helm chart in [`charts/financetracker`](charts/financetracker). It has been tested on a local cluster (Docker Desktop); production keeps running on Azure App Service.
+
+```mermaid
+flowchart LR
+    U[Browser] --> T[Traefik · Ingress]
+    T --> S[Service api]
+    S --> A1[API pod 1]
+    S --> A2[API pod 2]
+    A1 --> DB[(SQL Server · StatefulSet + PVC)]
+    A2 --> DB
+```
+
+- **API as a Deployment** with 2 replicas and zero-downtime rolling updates (`maxUnavailable: 0`).
+- **Three probes**: startup (gives the migrations time), liveness on `/health` (restarts a hung process) and readiness on `/health/ready` (takes a pod out of traffic if it cannot reach the database, without restarting it).
+- **An initContainer** waits for SQL Server before the API starts, so it never tries to migrate against a database that is not ready.
+- **SQL Server as a StatefulSet** with a persistent volume: the data survives deleting the pod and even redeploying it from scratch.
+- **Secrets stay out of Git**: the chart only references Secrets that already exist in the cluster.
+- **Ingress with Traefik**: the API is reached by domain, load-balanced across the ready replicas.
+- `sql.enabled: false` deploys only the API, pointing to an external database such as Azure SQL.
+
+### ▶️ Deploy
+
+Prerequisites: a cluster (`kubectl get nodes` → Ready), Helm and an Ingress controller (Traefik):
+
+```bash
+helm repo add traefik https://traefik.github.io/charts
+helm install traefik traefik/traefik -n traefik --create-namespace
+```
+
+Create the namespace and the Secrets (never committed):
+
+```bash
+kubectl create namespace financetracker
+kubectl create secret generic sql-secret -n financetracker \
+  --from-literal=MSSQL_SA_PASSWORD='<strong-password>'
+kubectl create secret generic api-secret -n financetracker \
+  --from-literal=ConnectionStrings__DefaultConnection='Server=sql;Database=FinanceTrackerDb;User Id=sa;Password=<strong-password>;TrustServerCertificate=True' \
+  --from-literal=Jwt__Key="$(openssl rand -base64 48)"
+```
+
+Install the chart:
+
+```bash
+helm install financetracker charts/financetracker -n financetracker
+```
+
+Then open `http://financetracker.localhost/health/ready` and `http://financetracker.localhost/swagger`.
+
+Any value can be changed without touching the templates, and every change can be rolled back:
+
+```bash
+helm upgrade financetracker charts/financetracker -n financetracker --set api.replicas=3
+helm rollback financetracker 1 -n financetracker
+```
 
 ## ⚙️ CI/CD
 
