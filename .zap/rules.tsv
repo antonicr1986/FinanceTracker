@@ -1,0 +1,6 @@
+10049	INFO	(Storable/Non-Storable Content: Cache-Control no-store es intencionado en las respuestas de la API)
+100000	INFO	(Respuestas 4xx: 400 por validacion y 404 por recursos de otro usuario son el comportamiento esperado)
+100001	INFO	(Content-Type text/html: es Swagger UI, documentacion publica a proposito)
+10111	INFO	(Authentication Request Identified: es el endpoint de login, solo informativo)
+40014	INFO	(XSS persistente en JSON: la API devuelve JSON con nosniff y CSP default-src none; los tres clientes escapan el texto al mostrarlo)
+6	INFO	(Path Traversal: falso positivo, el id de la ruta es int y no se usa para acceder a archivos)

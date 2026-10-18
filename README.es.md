@@ -415,14 +415,44 @@ En los push a `master`, ademas:
 - La etiqueta con el SHA completo del commit y con `latest`
 - Despliega en Azure App Service esa misma imagen, por su etiqueta SHA:
   produccion ejecuta exactamente lo que se ha escaneado, sin volver a compilar.
-  Solo ocurre si las pruebas y el escaneo estan en verde: si Trivy falla, no se
-  publica ni se despliega nada
+  Solo ocurre si pasan **todos** los controles: pruebas, escaneo de la imagen,
+  escaneo de secretos, validacion y escaneo de seguridad de la infraestructura
+  y el DAST activo de la API (ver mas abajo). Si cualquiera falla, no se
+  despliega nada
+- Tras el despliegue, **OWASP ZAP** revisa la API ya publicada (DAST pasivo,
+  modo baseline) y el pipeline falla si aparece una alerta nueva
+
+**DAST activo de la API (job `dast-api`).** En cada push y pull request, el
+workflow levanta en el runner una API y un SQL Server **desechables** con
+`docker compose` y claves aleatorias, inicia sesion con la cuenta demo y lanza
+el escaneo de API de **OWASP ZAP** a partir del `swagger.json`: ataca todos los
+endpoints, tambien los que exigen JWT, con inyecciones, entradas malformadas y
+peticiones sin permiso. Son ataques reales, por eso nunca se hacen contra
+produccion. Si ZAP encuentra algo nuevo, el job falla y **no se despliega**.
+Los avisos esperados (por ejemplo, los 400 de validacion) estan en
+`.zap/rules.tsv` como informativos, cada uno con su motivo: siguen saliendo en
+el informe, pero no bloquean. Los informes quedan como artefactos de la
+ejecucion (`zap-report` y `zap-api-report`) y no como issues, porque el
+repositorio es publico.
+
+**Cabeceras de seguridad.** Todas las respuestas llevan HSTS,
+`X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy`; las de la API,
+ademas, una CSP `default-src 'none'`, `Cache-Control: no-store` y
+`Cross-Origin-Resource-Policy` (ver `Middleware/SecurityHeaders.cs`). HSTS se
+anade a mano porque el TLS lo termina Azure y dentro del contenedor la peticion
+llega por HTTP.
 
 Las pull requests construyen la imagen para validar el Dockerfile, pero nunca
 publican. Como cada compilacion queda etiquetada por SHA, cualquier version
 anterior se puede volver a desplegar tal cual, sin recompilar: en local con
 `IMAGE_TAG` en el compose de produccion, y en Azure cambiando la etiqueta del
 contenedor.
+
+El propio workflow esta acotado: el `GITHUB_TOKEN` es de solo lectura por
+defecto y solo los jobs que lo necesitan piden mas permisos; cada job tiene un
+tiempo maximo, para que uno colgado no consuma minutos durante horas; y solo hay
+un despliegue a produccion a la vez (`concurrency`), sin cancelar el que esta en
+curso.
 
 Dependabot abre cada mes una pull request con las actualizaciones menores y de
 parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
@@ -437,6 +467,44 @@ eso sirve tambien de aviso de que produccion esta caida.
 
 Archivos de los workflows: `.github/workflows/ci.yml` y `.github/workflows/keep-warm.yml`
 
+## 🔷 Azure DevOps
+
+Además de en GitHub Actions, los cuatro repositorios del proyecto —esta API y
+los tres clientes— viven también en **Azure DevOps**, agrupados en un mismo
+proyecto: Azure Repos guarda una copia de cada uno y Azure Pipelines los compila
+y los prueba desde ahí. El objetivo es tener el mismo CI en las dos plataformas,
+no sustituir una por otra.
+
+**El recorrido:** push a GitHub → copia en Azure Repos → pipeline de Azure. Un
+workflow en cada repositorio (`sync-azure-devops.yml` aquí, `mirror-azure.yml` en
+los clientes) sube cada rama y cada tag a Azure Repos con un token de acceso
+personal guardado como secreto de GitHub. Azure Pipelines escucha esa copia, así
+que no hay que subir nada dos veces.
+
+El pipeline de la API, `azure-pipelines.yml`, tiene dos etapas:
+
+- **Build y tests**: restaura, compila en Release, ejecuta las pruebas de xUnit
+  con cobertura de código, publica los resultados en las pestañas *Tests* y
+  *Code Coverage* de la ejecución y guarda la API publicada como artefacto.
+- **Docker**: construye la imagen, solo cuando la primera etapa está en verde,
+  para validar el Dockerfile.
+
+Cada cliente tiene su propio pipeline: linter, pruebas y build de producción en
+la web; comprobación de formato, build y pruebas en Windows en el de escritorio;
+pruebas unitarias y un APK de depuración en Android.
+
+Tres decisiones detrás:
+
+- **La copia no depende del CI.** La sincronización es un job independiente, así
+  que Azure Repos sigue igual que GitHub aunque falle un build: un build en rojo
+  sigue siendo un commit que existe.
+- **El despliegue se queda en GitHub Actions.** Azure Pipelines solo valida. Dos
+  sistemas desplegando el mismo push competirían entre sí, el mismo problema que
+  tuvo el cliente web con Vercel.
+- **El proyecto de Azure DevOps es privado.** Microsoft ha retirado los proyectos
+  públicos en Azure DevOps, así que no se puede abrir sin invitación; esta
+  sección y los archivos de los pipelines son lo que lo muestra desde aquí.
+
 ## 🏗️ Infraestructura como codigo (Terraform)
 
 La infraestructura de Azure esta descrita con **Terraform** en [`terraform/`](terraform/):
@@ -446,7 +514,7 @@ servidor Azure SQL y base de datos serverless. Los recursos ya existian y se
 
 ```mermaid
 flowchart LR
-    PR[Pull request] --> CHECK[fmt + validate]
+    PR[Pull request] --> CHECK[fmt + validate<br/>+ escaneo Trivy]
     CHECK --> PLAN[terraform plan<br/>OIDC, solo lectura]
     PLAN --> COMMENT[Comentario resumen<br/>en la PR]
     COMMENT --> MERGE[Merge a master]
@@ -471,9 +539,34 @@ flowchart LR
   `sql_admin_password_version`.
 - **Protecciones:** `prevent_destroy` en el grupo de recursos, el servidor SQL y
   la base de datos.
+- **Escaneo de seguridad** con Trivy (`trivy config`) en cada push y pull
+  request: busca malas configuraciones (acceso publico, TLS, cifrado...) y falla
+  con hallazgos altos o criticos, lo que tambien bloquea el despliegue. Las
+  excepciones son decisiones conscientes, como lo que el plan gratuito no
+  permite, y quedan documentadas con su motivo en `terraform/.trivyignore`.
+- **Identidad administrada** en la web app: la base para leer secretos de Key
+  Vault y conectarse a SQL sin contrasena.
 - **Reparto claro con el pipeline:** Terraform gestiona la infraestructura; el job
   `deploy` gestiona la imagen del contenedor (que Terraform ignora), asi que
   nunca se pisan.
+
+## 📈 Observabilidad (Azure Monitor)
+
+La API envia su telemetria a **Application Insights** con **OpenTelemetry**
+(`Azure.Monitor.OpenTelemetry.AspNetCore`): cada peticion con su endpoint,
+codigo y duracion, las llamadas salientes, las excepciones y los logs de
+Serilog. Solo se activa si existe `APPLICATIONINSIGHTS_CONNECTION_STRING`, asi
+que en local, en los tests y en el entorno desechable del DAST no envia nada.
+
+Todo esta en Terraform ([`terraform/monitoring.tf`](terraform/monitoring.tf)):
+
+- **Log Analytics Workspace** con 30 dias de retencion y un **tope de ingesta
+  diaria**, para no salir nunca del nivel gratuito.
+- **Application Insights** sobre ese workspace.
+- **Alertas por email** sobre las metricas de la Web App: mas de 5 errores
+  **5xx** en 5 minutos, y **picos de 401 y 403**, la huella tipica de un
+  ataque de fuerza bruta contra el login o de alguien probando a entrar donde
+  no debe.
 
 ## 🧪 Ejecutar las pruebas
 

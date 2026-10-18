@@ -22,11 +22,19 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Permisos minimos por defecto para el GITHUB_TOKEN en todos los jobs: solo
+# lectura del codigo. Los jobs que necesitan mas (docker, terraform-plan) lo
+# declaran ellos mismos y solo para ellos.
+permissions:
+  contents: read
+
 jobs:
-  # Comprueba la infraestructura como codigo sin tocar Azure: formato y
-  # validacion de la sintaxis y los tipos. No necesita credenciales.
+  # Comprueba la infraestructura como codigo sin tocar Azure: formato,
+  # validacion de la sintaxis y los tipos, y escaneo de seguridad.
+  # No necesita credenciales.
   terraform:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: terraform
@@ -39,6 +47,27 @@ jobs:
         run: terraform init -backend=false -input=false
       - name: terraform validate
         run: terraform validate
+
+      # Trivy se instala desde el repositorio oficial de Aqua Security
+      # (paquete firmado), igual que en el job docker
+      - name: Install Trivy
+        run: |
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq trivy
+
+      # fmt y validate solo comprueban que el codigo es correcto, no que la
+      # infraestructura sea segura. Este escaneo busca malas configuraciones:
+      # acceso publico a SQL, HTTPS o TLS no forzados, reglas de red abiertas...
+      # Falla con hallazgos ALTOS o CRITICOS. Si alguno es una decision
+      # consciente, se documenta y se excluye en terraform/.trivyignore.
+      - name: IaC security scan
+        run: |
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            .
 
   # Valida el chart de Helm (despliegue en Kubernetes) sin necesitar un
   # cluster: lint estricto y renderizado de las plantillas con los valores
@@ -73,6 +102,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       id-token: write       # token OIDC para Azure
       contents: read
@@ -86,6 +116,7 @@ jobs:
       ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
       TF_IN_AUTOMATION: true
     steps:
       - uses: actions/checkout@v7
@@ -142,6 +173,7 @@ jobs:
   # No depende del build: si hay una fuga, da igual que compile.
   secrets:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
         with:
@@ -159,6 +191,7 @@ jobs:
 
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -197,6 +230,7 @@ jobs:
   docker:
     needs: build-and-test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -271,16 +305,29 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
 
-  # Despliegue a Azure App Service. Solo en push a master y solo si los tests
-  # pasan y el escaneo de la imagen (job docker) tambien: si Trivy encuentra
-  # una vulnerabilidad, no se publica la imagen ni se despliega el codigo.
+  # Despliegue a Azure App Service. Solo en push a master y solo si TODOS los
+  # controles han pasado: tests, escaneo de la imagen (docker), escaneo de
+  # secretos (secrets), validacion y escaneo de seguridad de la
+  # infraestructura (terraform) y DAST activo de la API (dast-api). Si
+  # cualquiera falla, no se despliega.
   deploy:
-    needs: [build-and-test, docker]
+    needs: [build-and-test, docker, secrets, terraform, dast-api]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    # Incluye hasta ~15 min de reintentos del smoke test
+    timeout-minutes: 25
+    # Un solo despliegue a produccion a la vez. Si llegan dos pushes seguidos,
+    # el segundo espera a que termine el primero (no lo cancela: cortar un
+    # despliegue a medias podria dejar la app en un estado inconsistente).
+    concurrency:
+      group: production
+      cancel-in-progress: false
     environment:
       name: production
       url: ${{ steps.deploy.outputs.webapp-url }}
+    # La URL desplegada se expone para que el job dast sepa que escanear
+    outputs:
+      webapp-url: ${{ steps.deploy.outputs.webapp-url }}
     steps:
       # Azure ejecuta la MISMA imagen que se acaba de escanear con Trivy y
       # publicar en GHCR, identificada por el SHA del commit: no se vuelve a
@@ -314,3 +361,102 @@ jobs:
           done
           echo "::error::La API no responde correctamente en $APP_URL/health/ready"
           exit 1
+
+  # DAST pasivo de produccion: revisa la API ya desplegada desde fuera,
+  # con OWASP ZAP en modo baseline (no destructivo): cabeceras de
+  # seguridad que faltan, cookies inseguras, informacion expuesta en errores...
+  # Va despues del smoke test, asi que la API ya esta arrancada.
+  #  - fail_action: true: cualquier alerta nueva pone el pipeline en rojo. Los
+  #    riesgos aceptados estan en .zap/rules.tsv como INFO (salen en el
+  #    informe pero no fallan), cada uno con su motivo.
+  #  - allow_issue_writing: false porque el repo es publico: el informe NO se
+  #    publica como issue (seria una lista de debilidades a la vista de todos),
+  #    solo como artefacto de la ejecucion. Asi ademas basta con permiso de
+  #    solo lectura.
+  dast:
+    needs: deploy
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.15.0
+        with:
+          target: ${{ needs.deploy.outputs.webapp-url }}
+          # Las reglas se pasan con -c a mano: la action solo usa rules_file_name
+          # si el archivo tiene alguna regla IGNORE, y aqui todas son INFO.
+          cmd_options: '-c .zap/rules.tsv'
+          fail_action: true
+          allow_issue_writing: false
+          artifact_name: zap-report
+
+  # DAST activo y autenticado de la API: ZAP lee el swagger.json y ataca TODOS
+  # los endpoints (inyecciones, cabeceras, errores que revelan informacion...).
+  # Como son ataques reales, NO se hace contra produccion: se levanta la API y
+  # un SQL Server desechables en el propio runner (docker compose), con
+  # secretos aleatorios que solo existen durante esta ejecucion.
+  #  - Se autentica con la cuenta demo, que la API siembra al arrancar, para
+  #    llegar tambien a los endpoints que exigen JWT.
+  #  - fail_action: true y deploy depende de este job: si ZAP encuentra algo
+  #    nuevo, no se despliega. Riesgos aceptados en .zap/rules.tsv (INFO).
+  #  - El informe queda como artefacto (zap-api-report), no como issue,
+  #    porque el repo es publico.
+  dast-api:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Arrancar la API y SQL Server desechables
+        run: |
+          jwt_key=$(openssl rand -hex 32)
+          sa_secret="Aa1-$(openssl rand -hex 16)"
+          echo "::add-mask::$jwt_key"
+          echo "::add-mask::$sa_secret"
+          JWT_KEY="$jwt_key" MSSQL_SA_PASSWORD="$sa_secret" docker compose up -d --build
+
+      - name: Esperar a que la API este lista
+        run: |
+          for i in $(seq 1 40); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:8080/health/ready || true)
+            echo "Intento $i: HTTP $status"
+            if [ "$status" = "200" ]; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::La API desechable no ha arrancado"
+          docker compose logs api | tail -100
+          exit 1
+
+      - name: Iniciar sesion con la cuenta demo
+        run: |
+          token=$(curl -s -X POST http://localhost:8080/api/Users/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"demo@financetracker.app","password":"Demo1234!"}' | jq -r .token) # gitleaks:allow
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "::error::No se pudo iniciar sesion con la cuenta demo"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "ZAP_AUTH_HEADER_VALUE=Bearer $token" >> "$GITHUB_ENV"
+
+      - name: OWASP ZAP API scan
+        uses: zaproxy/action-api-scan@v0.10.0
+        env:
+          ZAP_AUTH_HEADER: Authorization
+          ZAP_AUTH_HEADER_SITE: localhost
+        with:
+          target: http://localhost:8080/swagger/v1/swagger.json
+          format: openapi
+          # Las reglas se pasan con -c a mano: la action solo usa rules_file_name
+          # si el archivo tiene alguna regla IGNORE, y aqui todas son INFO.
+          cmd_options: '-c .zap/rules.tsv'
+          fail_action: true
+          allow_issue_writing: false
+          artifact_name: zap-api-report
+
+      - name: Apagar el entorno
+        if: always()
+        run: docker compose down -v

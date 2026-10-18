@@ -421,13 +421,42 @@ On pushes to `master` it additionally:
 - Publishes the image to GitHub Container Registry
 - Tags it with the full commit SHA and with `latest`
 - Deploys that very same image to Azure App Service, by its SHA tag: production
-  runs exactly what was scanned, with no rebuild. It only happens once the tests
-  and the scan are green: if Trivy fails, nothing is published or deployed
+  runs exactly what was scanned, with no rebuild. It only happens once **every**
+  check passes: tests, image scan, secret scan, infrastructure validation and
+  security scan, and the active DAST of the API (see below). If any of them
+  fails, nothing is deployed
+- After the deployment, **OWASP ZAP** reviews the published API (passive DAST,
+  baseline mode) and the pipeline fails if a new alert shows up
+
+**Active DAST of the API (`dast-api` job).** On every push and pull request,
+the workflow starts a **throwaway** API and SQL Server on the runner with
+`docker compose` and random keys, signs in with the demo account and runs the
+**OWASP ZAP** API scan from `swagger.json`: it attacks every endpoint,
+including the ones that require a JWT, with injections, malformed input and
+unauthorised requests. These are real attacks, which is why they never target
+production. If ZAP finds anything new, the job fails and **nothing is
+deployed**. Expected findings (such as validation 400s) are listed in
+`.zap/rules.tsv` as informational, each with its reason: they still appear in
+the report but do not block. The reports are kept as run artifacts
+(`zap-report` and `zap-api-report`) rather than issues, because the
+repository is public.
+
+**Security headers.** Every response carries HSTS, `X-Content-Type-Options`,
+`X-Frame-Options` and `Referrer-Policy`; API responses also get a
+`default-src 'none'` CSP, `Cache-Control: no-store` and
+`Cross-Origin-Resource-Policy` (see `Middleware/SecurityHeaders.cs`). HSTS is
+added by hand because TLS is terminated by Azure and requests reach the
+container over plain HTTP.
 
 Pull requests build the image to validate the Dockerfile, but never publish. Because
 every build is tagged by commit SHA, any previous version can be redeployed as-is,
 with no rebuild: locally with `IMAGE_TAG` in the production compose file, and in
 Azure by changing the container's tag.
+
+The workflow itself is kept tight: the `GITHUB_TOKEN` is read-only by default
+and only the jobs that need more ask for it; every job has a time limit, so a
+stuck one does not burn minutes for hours; and only one production deployment
+runs at a time (`concurrency`), without cancelling the one in progress.
 
 Dependabot opens a monthly pull request with the minor and patch updates of the
 NuGet packages and the workflow actions, grouped in one; major versions are left
@@ -442,6 +471,44 @@ production alert.
 
 Workflow files: `.github/workflows/ci.yml` and `.github/workflows/keep-warm.yml`
 
+## 🔷 Azure DevOps
+
+Besides GitHub Actions, the four repositories of the project — this API and the
+three clients — also live in **Azure DevOps**, grouped in one project: Azure
+Repos holds a copy of each one, and Azure Pipelines builds and tests them from
+there. The goal is running the same CI on both platforms, not replacing one with
+the other.
+
+**How it flows:** push to GitHub → copy in Azure Repos → Azure Pipeline. A
+workflow in each repository (`sync-azure-devops.yml` here, `mirror-azure.yml` in
+the clients) pushes every branch and tag to Azure Repos with a personal access
+token kept as a GitHub secret. Azure Pipelines listens to that copy, so nothing
+has to be pushed twice.
+
+The API pipeline, `azure-pipelines.yml`, runs in two stages:
+
+- **Build and tests**: restore, build in Release, run the xUnit suite with code
+  coverage, publish the results to the run's *Tests* and *Code Coverage* tabs,
+  and keep the published API as a pipeline artifact.
+- **Docker**: build the image, only once the first stage is green, to validate
+  the Dockerfile.
+
+Each client has its own pipeline: lint, tests and production build for the web;
+format check, build and tests on Windows for the desktop; unit tests and a debug
+APK for Android.
+
+Three decisions behind it:
+
+- **The copy does not depend on the CI.** The sync is a job of its own, so Azure
+  Repos stays identical to GitHub even when a build fails: a red build is still
+  a commit that happened.
+- **Deploying stays in GitHub Actions.** Azure Pipelines only validates. Two
+  systems deploying the same push would race each other, the same problem the
+  web client had with Vercel.
+- **The Azure DevOps project is private.** Microsoft has retired public projects
+  in Azure DevOps, so it cannot be opened without an invitation; this section
+  and the pipeline files are how it shows from here.
+
 ## 🏗️ Infrastructure as Code (Terraform)
 
 The Azure infrastructure is described with **Terraform** in [`terraform/`](terraform/):
@@ -451,7 +518,7 @@ were **imported** with `import` blocks, without recreating anything.
 
 ```mermaid
 flowchart LR
-    PR[Pull request] --> CHECK[fmt + validate]
+    PR[Pull request] --> CHECK[fmt + validate<br/>+ Trivy scan]
     CHECK --> PLAN[terraform plan<br/>OIDC, read-only]
     PLAN --> COMMENT[Summary comment<br/>on the PR]
     COMMENT --> MERGE[Merge to master]
@@ -475,9 +542,33 @@ flowchart LR
   the plan. Rotating it is a matter of bumping `sql_admin_password_version`.
 - **Guard rails:** `prevent_destroy` on the resource group, the SQL server and
   the database.
+- **Security scanning** with Trivy (`trivy config`) on every push and pull
+  request: it looks for misconfigurations (public access, TLS, encryption...)
+  and fails on high or critical findings, which also blocks the deployment.
+  Exceptions are deliberate decisions, such as what the free tier does not
+  allow, and are documented with their reason in `terraform/.trivyignore`.
+- **Managed identity** on the web app: the groundwork for reading secrets from
+  Key Vault and connecting to SQL without a password.
 - **Clear split with the pipeline:** Terraform owns the infrastructure; the
   `deploy` job owns the container image (ignored by Terraform), so they never
   fight over the same setting.
+
+## 📈 Observability (Azure Monitor)
+
+The API sends its telemetry to **Application Insights** with **OpenTelemetry**
+(`Azure.Monitor.OpenTelemetry.AspNetCore`): every request with its endpoint,
+status code and duration, outgoing calls, exceptions and the Serilog logs. It
+is only enabled when `APPLICATIONINSIGHTS_CONNECTION_STRING` exists, so
+nothing is sent locally, in tests or in the throwaway DAST environment.
+
+Everything is in Terraform ([`terraform/monitoring.tf`](terraform/monitoring.tf)):
+
+- **Log Analytics Workspace** with 30-day retention and a **daily ingestion
+  cap**, so it never leaves the free tier.
+- **Application Insights** on top of that workspace.
+- **Email alerts** on the Web App metrics: more than 5 **5xx** errors in 5
+  minutes, and **spikes of 401s and 403s**, the typical footprint of a brute
+  force attack on the login or someone probing where they should not be.
 
 ## 🧪 Running Tests
 
