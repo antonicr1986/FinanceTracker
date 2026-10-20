@@ -249,9 +249,14 @@ En local, con user secrets (el proyecto ya tiene `UserSecretsId`):
     dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<tu cadena de conexion>"
     dotnet user-secrets set "Jwt:Key" "<una cadena larga y aleatoria>"
 
-En Azure, como variables de entorno del App Service llamadas
-`ConnectionStrings__DefaultConnection` y `Jwt__Key`. El doble guion bajo es como
-la plataforma escribe el `:` de la configuracion de .NET.
+En Azure, los valores viven en **Key Vault** (`kv-financetracker`). Las
+variables de entorno del App Service `ConnectionStrings__DefaultConnection` y
+`Jwt__Key` solo contienen una referencia, como
+`@Microsoft.KeyVault(VaultName=kv-financetracker;SecretName=Jwt--Key)`, que la
+plataforma resuelve al arrancar con la **identidad administrada** de la web app,
+asi que el codigo las lee como configuracion normal. El doble guion bajo es como
+la plataforma escribe el `:` de la configuracion de .NET; en Key Vault los
+nombres usan `--`, porque no admiten guiones bajos.
 
 ### 🗃️ Base de datos
 
@@ -509,8 +514,9 @@ Tres decisiones detrás:
 
 La infraestructura de Azure esta descrita con **Terraform** en [`terraform/`](terraform/):
 grupo de recursos, plan de App Service (F1), web app Linux (contenedor de GHCR),
-servidor Azure SQL y base de datos serverless. Los recursos ya existian y se
-**importaron** con bloques `import`, sin recrear nada.
+servidor Azure SQL y base de datos serverless, Key Vault y monitorizacion. Los
+recursos originales ya existian y se **importaron** con bloques `import`, sin
+recrear nada.
 
 ```mermaid
 flowchart LR
@@ -544,8 +550,15 @@ flowchart LR
   con hallazgos altos o criticos, lo que tambien bloquea el despliegue. Las
   excepciones son decisiones conscientes, como lo que el plan gratuito no
   permite, y quedan documentadas con su motivo en `terraform/.trivyignore`.
-- **Identidad administrada** en la web app: la base para leer secretos de Key
-  Vault y conectarse a SQL sin contrasena.
+- **Secretos en Key Vault, leidos con identidad administrada.** La cadena de
+  conexion y la clave JWT viven en Key Vault (autorizacion por RBAC, borrado
+  temporal y proteccion de purga), y la identidad administrada de la web app
+  tiene el rol **Key Vault Secrets User** solo sobre ese Key Vault: puede leer
+  secretos y nada mas. Terraform crea el Key Vault y las asignaciones de rol,
+  pero **no los valores de los secretos**, que se cargan una vez con la CLI para
+  que nunca lleguen al estado. El acceso de red publico es una excepcion
+  documentada (`AZU-0013`): el plan F1 no tiene integracion con VNet, y el acceso
+  sigue limitado por los roles de Entra ID.
 - **Reparto claro con el pipeline:** Terraform gestiona la infraestructura; el job
   `deploy` gestiona la imagen del contenedor (que Terraform ignora), asi que
   nunca se pisan.
