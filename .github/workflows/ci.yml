@@ -117,6 +117,8 @@ jobs:
       ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
       TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+      TF_VAR_tenant_id: ${{ vars.AZURE_TENANT_ID }}
+      TF_VAR_key_vault_admin_object_id: ${{ vars.KEY_VAULT_ADMIN_OBJECT_ID }}
       TF_IN_AUTOMATION: true
     steps:
       - uses: actions/checkout@v7

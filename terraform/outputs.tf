@@ -12,3 +12,7 @@ output "app_insights_connection_string" {
   value     = azurerm_application_insights.api.connection_string
   sensitive = true
 }
+
+output "key_vault_uri" {
+  value = azurerm_key_vault.main.vault_uri
+}

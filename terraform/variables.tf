@@ -99,3 +99,19 @@ variable "alert_email" {
   description = "Email que recibe las alertas de Azure Monitor."
   type        = string
 }
+
+variable "tenant_id" {
+  description = "Tenant de Entra ID (az account show --query tenantId -o tsv)."
+  type        = string
+}
+
+variable "key_vault_name" {
+  description = "Nombre del Key Vault. Es global en todo Azure: 3-24 caracteres, letras, numeros y guiones."
+  type        = string
+  default     = "kv-financetracker"
+}
+
+variable "key_vault_admin_object_id" {
+  description = "Object ID de quien administra los secretos (az ad signed-in-user show --query id -o tsv)."
+  type        = string
+}

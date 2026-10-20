@@ -21,3 +21,11 @@ AZU-0022
 # Necesita una Storage Account o Log Analytics (coste). Pendiente para
 # cuando se anada monitorizacion.
 AZU-0027
+
+# AZU-0013: Key Vault con acceso de red publico.
+# La web app (plan F1) no tiene integracion con VNet ni IP de salida fija, y
+# las referencias de Key Vault de App Service no pasan por la excepcion de
+# "servicios de confianza". El acceso queda limitado por RBAC (Entra ID): sin
+# un rol sobre el Key Vault no se puede leer nada. Revisar si se sube de plan
+# (VNet + private endpoint).
+AZU-0013
