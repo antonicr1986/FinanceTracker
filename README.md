@@ -601,6 +601,21 @@ Test coverage currently includes:
 - Transaction filtering by category and date range
 - Not found scenarios for budgets and transactions
 
+## 🤖 AI-assisted development
+
+The project is developed with AI that splits, proposes and writes code in small steps, while decisions stay human. Instructions for agents live in [`CLAUDE.md`](CLAUDE.md) ([`AGENTS.md`](AGENTS.md) for other tools).
+
+```
+/backlog  →  /story  →  /pair  →  /code-review
+```
+
+| Skill | What it does |
+| --- | --- |
+| [`/backlog`](.claude/skills/backlog/SKILL.md) | Turns an idea into a short backlog of vertical user stories. |
+| [`/story`](.claude/skills/story/SKILL.md) | Refines one story: 2–3 acceptance criteria and a mini plan. |
+| [`/pair`](.claude/skills/pair/SKILL.md) | Implements the story with TDD, one test at a time, waiting for approval. |
+| [`/code-review`](.claude/skills/code-review/SKILL.md) | Reviews the changes against the story before the commit. |
+
 ## 📌 Project Status
 
 Implemented:

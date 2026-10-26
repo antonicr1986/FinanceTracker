@@ -1,0 +1,57 @@
+# Formulario "Historia de usuario". Los campos coinciden con la salida de /story:
+# /backlog rellena la historia (y dependencias); /story completa el resto editando la issue.
+name: Historia de usuario
+description: Una historia vertical del backlog (/backlog), que se refina con /story.
+title: "[Historia] "
+labels: [historia]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Al crearla desde `/backlog` basta con la **historia**. El resto lo genera `/story` justo antes de construirla: edita la issue y pega su bloque.
+
+  - type: textarea
+    id: historia
+    attributes:
+      label: Historia
+      description: Una sola línea, desde el punto de vista del usuario. El actor nunca es el desarrollador ni el sistema.
+      placeholder: Como <actor>, quiero <acción>, para <beneficio>.
+    validations:
+      required: true
+
+  - type: input
+    id: requiere
+    attributes:
+      label: Requiere
+      description: Solo si esta historia no tiene sentido sin otra.
+      placeholder: "#3"
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: 2–3 criterios. Solo describen qué ve u obtiene el usuario, nunca cómo se implementa.
+      placeholder: |
+        - [ ] Dado <contexto>, cuando <acción>, entonces <resultado>.
+        - [ ] Dado <contexto>, cuando <acción>, entonces <resultado>.
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan
+      description: 5 puntos como máximo, sin código ni nombres de archivo.
+      placeholder: "- ..."
+
+  - type: textarea
+    id: fuera-de-alcance
+    attributes:
+      label: Fuera de alcance
+      description: Lo que se queda fuera de esta historia, para que no se cuele.
+      placeholder: "- ..."
+
+  - type: textarea
+    id: sugerencias
+    attributes:
+      label: Sugerencias (tú decides)
+      description: Opcional. Patrones o refactors que podrían ayudar, con su porqué.
+      placeholder: "- ..."

@@ -1,0 +1,40 @@
+# Formulario "Tarea": trabajo de mantenimiento que no es una historia de usuario
+# (actualizar dependencias, ajustar el CI, deuda técnica...). /backlog no genera estas tareas.
+name: Tarea
+description: Trabajo de mantenimiento que no aporta una funcionalidad al usuario.
+title: "[Tarea] "
+labels: [tarea]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Si aporta algo que el usuario ve u obtiene, es una **historia de usuario**, no una tarea.
+
+  - type: textarea
+    id: que
+    attributes:
+      label: Qué
+      description: Qué hay que hacer.
+      placeholder: Actualizar .NET 8 a .NET 10.
+    validations:
+      required: true
+
+  - type: textarea
+    id: por-que
+    attributes:
+      label: Por qué
+      description: Qué problema resuelve o qué riesgo evita.
+      placeholder: .NET 8 deja de tener soporte en noviembre de 2026.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verificacion
+    attributes:
+      label: Cómo se verifica
+      description: Cómo sabremos que está terminada.
+      placeholder: |
+        - [ ] El CI pasa en verde con el nuevo SDK.
+        - [ ] La app arranca en pre sin errores.
+    validations:
+      required: true

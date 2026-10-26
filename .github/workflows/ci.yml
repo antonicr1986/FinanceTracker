@@ -21,6 +21,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # % minimo de cobertura de lineas (el mismo valor que en CLAUDE.md)
+  COVERAGE_MIN: 30
 
 # Permisos minimos por defecto para el GITHUB_TOKEN en todos los jobs: solo
 # lectura del codigo. Los jobs que necesitan mas (docker, terraform-plan) lo
@@ -176,15 +178,24 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: '8.30.1'
+      # SHA-256 del .tar.gz de Linux: cambialo junto con la version
+      GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # gitleaks necesita el historial completo
 
+      # Se comprueba el SHA-256 de la descarga antes de ejecutar nada: si el
+      # binario de la release cambiara, el pipeline falla en vez de ejecutarlo
       - name: Install gitleaks
         run: |
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz" | tar -xz gitleaks
-          sudo mv gitleaks /usr/local/bin/
+          archivo="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "${RUNNER_TEMP}/${archivo}" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archivo}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archivo}" -C "${RUNNER_TEMP}" gitleaks
+          sudo mv "${RUNNER_TEMP}/gitleaks" /usr/local/bin/
 
       # --redact es importante: sin el, el secreto encontrado acabaria escrito
       # en los logs de la ejecucion, que en un repo publico ve cualquiera
@@ -227,7 +238,31 @@ jobs:
         run: dotnet build FinanceTracker.sln --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test FinanceTracker.Tests/FinanceTracker.Tests.csproj --no-restore
+        run: dotnet test FinanceTracker.Tests/FinanceTracker.Tests.csproj --no-restore --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      # Une la cobertura en un solo informe y la publica en el resumen del job
+      - name: Coverage report
+        uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # v5.5.11
+        with:
+          reports: TestResults/**/coverage.cobertura.xml
+          targetdir: coverage
+          reporttypes: Cobertura;MarkdownSummaryGithub
+
+      - name: Coverage summary
+        run: cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      # Falla si la cobertura de lineas baja de COVERAGE_MIN
+      - name: Minimum coverage
+        run: |
+          python3 - <<'PY'
+          import os, sys, xml.etree.ElementTree as ET
+          minimo = float(os.environ["COVERAGE_MIN"])
+          actual = float(ET.parse("coverage/Cobertura.xml").getroot().get("line-rate")) * 100
+          print(f"Cobertura de lineas: {actual:.1f} % (minimo: {minimo:.0f} %)")
+          if actual < minimo:
+              print(f"::error::Cobertura {actual:.1f} % por debajo del minimo {minimo:.0f} %")
+              sys.exit(1)
+          PY
 
   docker:
     needs: build-and-test

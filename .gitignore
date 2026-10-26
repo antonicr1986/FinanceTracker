@@ -364,3 +364,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Archivos locales (Claude Code y Visual Studio)
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/integrar-kit/

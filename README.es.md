@@ -600,6 +600,21 @@ La cobertura incluye hoy:
 - Filtrado de movimientos por categoria y rango de fechas
 - Casos de "no encontrado" para presupuestos y movimientos
 
+## 🤖 Desarrollo con IA
+
+El proyecto se desarrolla con IA que divide, propone y escribe codigo en pasos pequeños, pero las decisiones son humanas. Las instrucciones para agentes estan en [`CLAUDE.md`](CLAUDE.md) ([`AGENTS.md`](AGENTS.md) para otras herramientas).
+
+```
+/backlog  →  /story  →  /pair  →  /code-review
+```
+
+| Skill | Que hace |
+| --- | --- |
+| [`/backlog`](.claude/skills/backlog/SKILL.md) | Convierte una idea en un backlog corto de historias de usuario verticales. |
+| [`/story`](.claude/skills/story/SKILL.md) | Refina una historia: 2–3 criterios de aceptacion y un mini plan. |
+| [`/pair`](.claude/skills/pair/SKILL.md) | Implementa la historia con TDD, un test cada vez, esperando aprobacion. |
+| [`/code-review`](.claude/skills/code-review/SKILL.md) | Revisa los cambios frente a la historia antes del commit. |
+
 ## 📌 Estado del proyecto
 
 Implementado:

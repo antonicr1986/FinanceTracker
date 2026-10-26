@@ -1,13 +1,73 @@
-# Formato comun del codigo. "dotnet format" lo aplica y el CI lo comprueba.
+# EditorConfig: formato común para el editor, dotnet format y la IA
+# https://editorconfig.org
 root = true
 
 [*]
+# Sin "charset": los .cs llevan BOM (lo que guarda Visual Studio) y forzar utf-8 los cambiaría todos
 indent_style = space
+indent_size = 4
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-[*.cs]
-indent_size = 4
-
-[*.{json,yml,yaml,csproj,props,targets}]
+[*.{json,yml,yaml,csproj,props,targets,xml,config}]
 indent_size = 2
+
+[*.{js,jsx,ts,tsx,css,scss,html}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# using (sin forzar System primero: el código existente no sigue ese orden)
+csharp_using_directive_placement = outside_namespace:warning
+
+# Namespaces de archivo (C# 10+). Solo sugerencia: las migraciones generadas usan bloque
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+# Llaves y saltos de línea
+csharp_new_line_before_open_brace = all
+csharp_prefer_braces = true:warning
+
+# var
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# Preferencias de lenguaje
+dotnet_style_prefer_auto_properties = true:suggestion
+dotnet_style_object_initializer = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+
+# Nombres: constantes y campos static readonly en PascalCase, la convención de .NET
+# (MaxRetries, DefaultTimeout). Son reglas más específicas que la de abajo, así que
+# tienen prioridad: sin ellas, también se exigiría _ a las constantes privadas.
+dotnet_naming_rule.constants_pascal_case.symbols = constants
+dotnet_naming_rule.constants_pascal_case.style = pascal_case
+dotnet_naming_rule.constants_pascal_case.severity = warning
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_rule.static_readonly_pascal_case.symbols = static_readonly_fields
+dotnet_naming_rule.static_readonly_pascal_case.style = pascal_case
+dotnet_naming_rule.static_readonly_pascal_case.severity = warning
+dotnet_naming_symbols.static_readonly_fields.applicable_kinds = field
+dotnet_naming_symbols.static_readonly_fields.required_modifiers = static, readonly
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# Nombres: el resto de campos privados con _camelCase
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+
+# Nombres: interfaces con prefijo I
+dotnet_naming_rule.interfaces_prefix_i.symbols = interfaces
+dotnet_naming_rule.interfaces_prefix_i.style = prefix_i
+dotnet_naming_rule.interfaces_prefix_i.severity = warning
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_style.prefix_i.capitalization = pascal_case
+dotnet_naming_style.prefix_i.required_prefix = I
