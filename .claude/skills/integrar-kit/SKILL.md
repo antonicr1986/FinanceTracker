@@ -1,6 +1,6 @@
 ---
 name: integrar-kit
-description: Integra el ai-project-kit en un proyecto que ya existía. Lee .claude/integrar-kit/INTEGRACION.md (lo genera instalar.ps1 en modo proyecto existente), lo fusiona todo sin pedirte decisiones (cada conflicto tiene una opción por defecto que te resume al final) y te deja un comando para commit, push y PR. Con "con plan" te pregunta antes; con "paso a paso" va archivo por archivo. Nunca hace commit.
+description: Integra el ai-project-kit en un proyecto que ya existía, o fusiona los archivos personalizados al actualizarlo. Lee .claude/integrar-kit/INTEGRACION.md (lo genera instalar.ps1 en modo proyecto existente o con -Actualizar), lo fusiona todo sin pedirte decisiones (cada conflicto tiene una opción por defecto que te resume al final) y te deja un comando para commit, push y PR. Con "con plan" te pregunta antes; con "paso a paso" va archivo por archivo. Nunca hace commit.
 disable-model-invocation: true
 ---
 
@@ -13,8 +13,17 @@ Eres quien integra el kit en un proyecto que ya tenía su forma de trabajar. El 
 ## Entrada
 
 1. **`.claude/integrar-kit/INTEGRACION.md`**: los archivos que fusionar (estado y qué vigilar), los pipelines del proyecto, la versión del kit y lo que **ya hizo el instalador** (rama, archivos copiados, `.gitignore`, etiquetas): no lo rehagas ni lo investigues. Si no existe, para y dime que ejecute primero el instalador (`instalar.ps1 <ruta>`).
-2. **`.claude/integrar-kit/kit/`**: la versión del kit de cada archivo de la tabla.
+2. **`.claude/integrar-kit/kit/`**: la versión del kit de cada archivo de la tabla. En una actualización, **`.claude/integrar-kit/anterior/`** tiene además la versión del kit que tenía el proyecto (cuando el instalador pudo obtenerla).
 3. **El proyecto**: su `CLAUDE.md`, el README (y sus traducciones), guías como `DEVELOPING.md` o `CONTRIBUTING.md`, los pipelines, las instrucciones de otras herramientas de IA (`.github/copilot-instructions.md`, `.cursorrules`…), cómo se compila y se prueba, y los últimos commits (`git log --oneline -20`) para conocer el idioma y el estilo de los mensajes.
+
+## Si es una actualización
+
+Si `INTEGRACION.md` dice "Tipo: actualización", el proyecto ya tenía el kit integrado y solo hay que traer lo nuevo a los archivos que personalizó. Es más corto:
+
+- **Paso 1:** no midas nada. La cobertura mínima, el `.editorconfig` y las demás decisiones ya se tomaron al integrar el kit: se mantienen.
+- **Paso 2:** para cada archivo de la tabla, mira qué cambia entre `anterior/<archivo>` y `kit/<archivo>` (`git diff --no-index`) y aplica **solo esos cambios** al archivo del proyecto, adaptados a lo que ya dice. Lo que el kit no ha cambiado no se toca, aunque sea distinto en el proyecto. Si un cambio del kit choca con algo que el proyecto personalizó, mantén lo del proyecto y apúntalo como decisión. Sin `anterior/`, compara con `kit/` y añade solo lo nuevo (secciones, reglas, jobs), sin quitar nada del proyecto.
+- **Paso 3:** verifica solo lo que hayas tocado: la sintaxis de la configuración y, si has cambiado el CI o el `.editorconfig`, compilar, tests y formato como el CI.
+- **Paso 4:** igual, con `chore: update ai-project-kit to <versión>` como mensaje y título. La rama es la actual (el instalador la crea); si es la principal, añade al principio del bloque `git switch -c chore/ai-project-kit-<versión>`.
 
 ## Paso 1: analizar y medir
 
