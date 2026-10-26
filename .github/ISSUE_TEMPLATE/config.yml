@@ -1,0 +1,3 @@
+# Configuración del selector de issues.
+# Sin issues en blanco: todas usan un formulario (historia, bug o tarea).
+blank_issues_enabled: false

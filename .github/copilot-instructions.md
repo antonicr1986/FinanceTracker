@@ -1,3 +1,5 @@
 - @azure Rule - Use Azure Tools - When handling requests related to Azure, always use your tools.
 - @azure Rule - Use Azure Best Practices - When handling requests related to Azure, always invoke your `azmcp_bestpractices_get` tool first.
 - @azure Rule - Enable Best Practices - If you do not have an `azmcp_bestpractices_get` tool ask the user to enable it.
+- Las instrucciones del proyecto para agentes de IA están en `CLAUDE.md` (resumen en `AGENTS.md`): síguelas.
+- **Nunca hagas commit ni push.** Sugiere el mensaje (en inglés) y el commit lo hace el desarrollador. No inventes requisitos: si falta información, pregunta.
