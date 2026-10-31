@@ -468,11 +468,19 @@ NuGet packages and the workflow actions, grouped in one; major versions are left
 for a manual decision.
 
 A second workflow, `keep-warm.yml`, calls `/health` every 15 minutes on
-weekdays during working hours so the free-tier app stays loaded. It hits the
-liveness check on purpose, which does not touch the database: Azure SQL keeps
-pausing when nobody uses it and does not burn the free vCore quota. If the API
-does not answer after several attempts the run fails, which doubles as a
+weekdays during working hours so the free-tier app does not get unloaded. It
+hits the liveness check on purpose, which does not touch the database: Azure SQL
+keeps pausing when nobody uses it and does not burn the free vCore quota. If the
+API does not answer after several attempts the run fails, which doubles as a
 production alert.
+
+**It is currently disabled.** The schedule is commented out and the workflow
+only runs manually (Actions → Keep API warm → Run workflow). Instead, the web,
+Android and desktop apps warm up the API when the sign-in screen opens and, if
+the wait gets long, say that the server is waking up. The file is kept so it can
+be turned back on (by uncommenting the `schedule`) if the API moves to a paid
+plan or it is needed again. While it is disabled there is no automatic downtime
+alert.
 
 Workflow files: `.github/workflows/ci.yml` and `.github/workflows/keep-warm.yml`
 

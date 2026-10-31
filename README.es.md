@@ -464,11 +464,19 @@ parche de los paquetes NuGet y de las acciones del workflow, agrupadas en una;
 las versiones mayores se dejan para decidirlas a mano.
 
 Un segundo workflow, `keep-warm.yml`, llama a `/health` cada 15 minutos entre
-semana en horario laboral para que la aplicacion del plan gratuito siga cargada.
-Usa a proposito la comprobacion de liveness, que no toca la base de datos: Azure
-SQL se sigue pausando cuando nadie la usa y no gasta el cupo gratuito de
-vCore-segundos. Si la API no responde tras varios intentos, la ejecucion falla, y
-eso sirve tambien de aviso de que produccion esta caida.
+semana en horario laboral para que la aplicacion del plan gratuito no se
+descargue. Usa a proposito la comprobacion de liveness, que no toca la base de
+datos: Azure SQL se sigue pausando cuando nadie la usa y no gasta el cupo
+gratuito de vCore-segundos. Si la API no responde tras varios intentos, la
+ejecucion falla, y eso sirve tambien de aviso de que produccion esta caida.
+
+**Ahora esta desactivado.** La ejecucion programada esta comentada y el workflow
+solo se lanza a mano (Actions → Keep API warm → Run workflow). En su lugar, las
+apps web, Android y escritorio precalientan la API al abrir el login y, si la
+espera se alarga, avisan de que el servidor esta despertando. Se conserva el
+archivo para reactivarlo (descomentando el `schedule`) si la API pasa a un plan
+de pago o hace falta otra vez. Mientras este desactivado no hay aviso
+automatico de caida.
 
 Archivos de los workflows: `.github/workflows/ci.yml` y `.github/workflows/keep-warm.yml`
 

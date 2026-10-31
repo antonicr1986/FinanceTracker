@@ -1,5 +1,11 @@
 name: Keep API warm
 
+# DESACTIVADO: la ejecucion programada esta comentada mas abajo. La API sigue
+# en el plan gratuito y basta con el precalentamiento que hacen las apps al
+# abrir el login, junto al aviso de "el servidor esta despertando".
+# Se puede lanzar a mano desde la pestana Actions (workflow_dispatch). Para
+# reactivarlo, descomentar las dos lineas de "schedule".
+
 # El plan gratuito F1 de App Service no permite "Always On": tras unos 20
 # minutos sin peticiones la API se descarga y la siguiente tarda en arrancar.
 # Este workflow la llama cada 15 minutos en horario laboral, que es cuando
@@ -19,8 +25,8 @@ name: Keep API warm
 #   como aviso de que algo va mal en produccion.
 
 on:
-  schedule:
-    - cron: '*/15 6-19 * * 1-5'
+  # schedule:
+  #   - cron: '*/15 6-19 * * 1-5'
   workflow_dispatch:
 
 permissions: {}
