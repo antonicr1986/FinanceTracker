@@ -42,7 +42,7 @@ jobs:
         working-directory: terraform
     steps:
       - uses: actions/checkout@v7
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
       - name: terraform fmt
         run: terraform fmt -check -recursive -diff
       - name: terraform init
@@ -79,7 +79,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
       - name: helm lint
         run: helm lint --strict charts/financetracker
       - name: helm template (valores por defecto)
@@ -124,7 +124,7 @@ jobs:
       TF_IN_AUTOMATION: true
     steps:
       - uses: actions/checkout@v7
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
       # La contrasena del administrador SQL es write-only: solo se envia a
@@ -242,7 +242,7 @@ jobs:
 
       # Une la cobertura en un solo informe y la publica en el resumen del job
       - name: Coverage report
-        uses: danielpalme/ReportGenerator-GitHub-Action@d3ebf1f760f7d8ab92cc44d9bcfee7ad73722a31 # v5.5.11
+        uses: danielpalme/ReportGenerator-GitHub-Action@861674232075b2c6bd1405a04c4bb9b150653e81 # v5.5.12
         with:
           reports: TestResults/**/coverage.cobertura.xml
           targetdir: coverage
