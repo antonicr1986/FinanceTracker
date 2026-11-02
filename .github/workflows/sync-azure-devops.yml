@@ -2,13 +2,16 @@ name: Sync to Azure DevOps
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - '**'
+      - '!dependabot/**'   # Dependabot no tiene acceso a los secrets de Actions
     tags: ['**']
   workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout (historial completo)
         uses: actions/checkout@v4
@@ -20,6 +23,10 @@ jobs:
           PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
           REPO: ${{ secrets.AZURE_DEVOPS_REPO }}
         run: |
+          if [[ -z "${PAT}" || -z "${REPO}" ]]; then
+            echo "::error::Faltan los secrets AZURE_DEVOPS_PAT o AZURE_DEVOPS_REPO"
+            exit 1
+          fi
           git remote add azure "https://sync:${PAT}@${REPO}"
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             git push --force azure "${GITHUB_REF}"
