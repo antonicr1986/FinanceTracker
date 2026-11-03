@@ -1,0 +1,8 @@
+# Copia este fichero como terraform.tfvars (ignorado en git) y rellenalo.
+# Los valores por defecto de variables.tf ya sirven; aqui solo lo que cambies.
+#
+# La contrasena de la base de datos NO va aqui: se pasa como variable de entorno.
+#   PowerShell: $env:TF_VAR_db_password = "SoloLetrasYNumeros123"
+
+# region            = "eu-west-1"
+# db_instance_class = "db.t3.micro"
