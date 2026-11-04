@@ -52,3 +52,12 @@ de gasto) se crea a mano una sola vez, fuera de Terraform.
   hay que hacerlo **antes** de la ventana de caída; el contrato común hay que
   mantenerlo a mano en los dos Terraform; Azure y AWS quedan de momento en
   carpetas asimétricas (`terraform/` y `terraform/aws/`).
+
+## Actualización (2026-11-04)
+
+AWS no arranca nunca con `:latest`, que se publica antes de pasar el DAST y
+puede apuntar a una imagen que no llegó a producción. `container_image` no
+tiene valor por defecto y solo acepta `sha-<commit>`. `terraform/aws/up.ps1`
+toma la versión que ejecuta Azure (solo lectura), la clave JWT del Key Vault y
+genera la contraseña de RDS en cada ejecución, de modo que levantar AWS es un
+solo comando y arranca con la misma versión que está en producción.

@@ -25,6 +25,9 @@ Files:
 - `secrets.tf`: connection string and JWT key in SSM.
 - `ecs.tf`: cluster, IAM roles, log group and the Express Mode service.
 - `outputs.tf`: `api_url` and `database_host`.
+- `up.ps1`: brings AWS up with the version that runs in Azure (see Usage).
+- `azure-image.ps1`, `jwt-key.ps1`, `db-password.ps1`: the functions `up.ps1` uses, each with its `*.Tests.ps1`.
+- `tests/`: `terraform test` for the `container_image` validation.
 
 ## One-time setup (outside Terraform)
 
@@ -36,17 +39,42 @@ These pieces belong to the account and are **not removed by `destroy`**, on purp
 
 ## Usage
 
+The easy way is `up.ps1`. It reads from Azure (read-only) the `sha-<commit>`
+image that is running in production and the JWT key from the Key Vault,
+generates a random RDS password and runs `terraform apply`:
+
 ```powershell
 cd terraform\aws
-$env:AWS_PROFILE        = "financetracker"
-$env:TF_VAR_db_password = "..."   # letters and numbers only
-$env:TF_VAR_jwt_key     = "..."   # the same as Jwt--Key in the Azure Key Vault
-
-terraform init      # first time only
-terraform plan      # should say 18 to add
-terraform apply
+az login            # first time, with read access to the Key Vault
+.\up.ps1 -Plan      # rehearsal: checks everything and creates nothing
+.\up.ps1            # brings AWS up (Terraform shows the plan and asks "yes")
 terraform destroy   # when done, to stop paying
 ```
+
+Requirements: `az login` and an AWS CLI profile called `financetracker` with
+the access key of the IAM user `terraform-financetracker` (never the root
+account). The secrets only live as environment variables of the script's
+process and are restored when it ends.
+
+The image is **never `:latest`**, which is published before the DAST scan
+passes and may point to a version that never reached production:
+`container_image` has no default and only accepts
+`ghcr.io/antonicr1986/financetracker:sha-<40 hex>`. To apply a specific
+version by hand, set `TF_VAR_db_password` and `TF_VAR_jwt_key` and pass
+`-var "container_image=ghcr.io/antonicr1986/financetracker:sha-<commit>"`.
+
+### Tests
+
+They need neither an Azure nor an AWS account:
+
+```powershell
+Invoke-Pester .\azure-image.Tests.ps1, .\jwt-key.Tests.ps1, .\db-password.Tests.ps1
+terraform init -backend=false
+terraform test      # validation of container_image, with a mocked provider
+```
+
+`up.ps1` reinitialises the backend itself (`-reconfigure`), so running the
+tests first does not get in its way.
 
 After `apply`, check `<api_url>/health/ready` (it includes the database) and
 log in with the demo account at `<api_url>/swagger`.
@@ -76,6 +104,13 @@ copy and the DNS switch.
   `db_password_version` or `jwt_key_version` by 1.
 - The JWT key is the same as in Azure so that, after the migration, users with
   an open session do not have to log in again.
+- `up.ps1` reads the JWT key from the Key Vault and generates the RDS password
+  (24 random letters and numbers, new on every run), so you never type them.
+  The password is inside the connection string stored in SSM
+  (`/financetracker/ConnectionStrings__DefaultConnection`), readable with
+  `aws ssm get-parameter --with-decryption`. Running `up.ps1` on an
+  environment that is already up only changes the image: the secrets keep
+  their version until you bump it.
 
 ## Contract with Azure
 
@@ -104,3 +139,4 @@ About **10 cents per hour** in total (load balancer, public IPs, Fargate 0.5 vCP
 
 - Validate this folder in CI and review Trivy's configuration warnings.
 - Move the Azure Terraform to `terraform/azure/` so both clouds are symmetrical.
+- Run the Pester and `terraform test` suites in the CI.
