@@ -59,6 +59,8 @@ Decisiones caras: **todo está filtrado por usuario.** Cada consulta de los serv
 
 <!-- Una línea por cada decisión que aplica a todo el proyecto (las propone /pair). Si es importante, detállala en docs/decisions/ con la plantilla 0000-plantilla.md. -->
 
+- Multicloud: un Terraform por nube (`terraform/` Azure, `terraform/aws/` AWS bajo demanda) con el mismo contrato (`container_image`, clave JWT → `api_url`, `database_host`). Ver [ADR 0001](docs/decisions/0001-despliegue-multicloud-terraform-por-nube.md).
+
 ## No tocar
 
 - Migraciones ya aplicadas en `FinanceTracker.Infraestructure/Migrations/`: los cambios del modelo van en una migración nueva.

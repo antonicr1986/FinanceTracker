@@ -29,3 +29,12 @@ AZU-0027
 # un rol sobre el Key Vault no se puede leer nada. Revisar si se sube de plan
 # (VNet + private endpoint).
 AZU-0013
+
+# AWS-0104 (aws/network.tf): salida HTTPS de la API a 0.0.0.0/0.
+# La tarea de ECS tiene que llegar a GHCR (imagen), SSM (secretos) y
+# CloudWatch (logs), que tienen IP publicas variables. La salida ya esta
+# limitada al puerto 443 (y al 1433 solo hacia el grupo de la base de datos).
+# Evitarlo del todo exige subredes privadas con VPC endpoints o NAT Gateway,
+# con coste fijo mensual. Revisar si el entorno de AWS pasa a estar siempre
+# encendido.
+AWS-0104
