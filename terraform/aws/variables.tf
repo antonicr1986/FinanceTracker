@@ -34,3 +34,26 @@ variable "db_password_version" {
   type        = number
   default     = 1
 }
+
+variable "container_image" {
+  description = "Imagen de la API. La misma que usa Azure: un solo build para las dos nubes."
+  type        = string
+  default     = "ghcr.io/antonicr1986/financetracker:latest"
+}
+
+# Clave con la que la API firma los JWT. Debe ser la MISMA que en Azure: asi un
+# usuario con sesion abierta no tiene que volver a entrar al migrar de nube.
+# Efimera y write-only, como la contrasena: TF_VAR_jwt_key, nunca en tfvars.
+variable "jwt_key" {
+  description = "Clave de firma de los JWT (la misma que Jwt--Key en el Key Vault de Azure)."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+# Para rotarla: nueva clave en TF_VAR_jwt_key y subir este valor en 1.
+variable "jwt_key_version" {
+  description = "Version de la clave de firma de los JWT."
+  type        = number
+  default     = 1
+}

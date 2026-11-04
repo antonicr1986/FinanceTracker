@@ -50,3 +50,14 @@ resource "aws_vpc_security_group_ingress_rule" "db_from_api" {
   to_port                      = 1433
   referenced_security_group_id = aws_security_group.api.id
 }
+
+# Entrada a la API solo desde dentro de la VPC (el balanceador que crea Express
+# Mode vive en ella). Desde internet no se llega directamente a las tareas.
+resource "aws_vpc_security_group_ingress_rule" "api_from_vpc" {
+  security_group_id = aws_security_group.api.id
+  description       = "Puerto de la API desde el balanceador (dentro de la VPC)"
+  ip_protocol       = "tcp"
+  from_port         = 8080
+  to_port           = 8080
+  cidr_ipv4         = data.aws_vpc.default.cidr_block
+}
