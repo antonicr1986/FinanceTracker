@@ -24,12 +24,27 @@ resource "aws_security_group" "api" {
   vpc_id      = data.aws_vpc.default.id
 }
 
-# Salida libre: la tarea descarga la imagen de GHCR y habla con RDS.
-resource "aws_vpc_security_group_egress_rule" "api_all" {
+# Salida limitada a lo que la tarea necesita:
+# - HTTPS a internet: descargar la imagen de GHCR y hablar con SSM y CloudWatch
+#   (tienen IP publicas variables, por eso 0.0.0.0/0; ver AWS-0104 en
+#   terraform/.trivyignore).
+# - SQL Server, solo hacia el grupo de seguridad de la base de datos.
+resource "aws_vpc_security_group_egress_rule" "api_https" {
   security_group_id = aws_security_group.api.id
-  description       = "Salida a internet (GHCR) y a RDS"
-  ip_protocol       = "-1"
+  description       = "HTTPS a GHCR, SSM y CloudWatch"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
   cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_egress_rule" "api_to_db" {
+  security_group_id            = aws_security_group.api.id
+  description                  = "SQL Server hacia RDS"
+  ip_protocol                  = "tcp"
+  from_port                    = 1433
+  to_port                      = 1433
+  referenced_security_group_id = aws_security_group.db.id
 }
 
 # --- Grupo de seguridad de la base de datos -----------------------------------
