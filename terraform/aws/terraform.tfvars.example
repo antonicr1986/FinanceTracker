@@ -2,9 +2,9 @@
 # Los valores por defecto de variables.tf ya sirven; aqui solo lo que cambies.
 #
 # La contrasena de la base de datos NO va aqui: se pasa como variable de entorno.
-#   PowerShell: $env:TF_VAR_db_password = "SoloLetrasYNumeros123"
+#   PowerShell: $env:TF_VAR_db_password = "<contrasena-solo-letras-y-numeros>"
 # Ni la clave de los JWT (la misma que Jwt--Key en el Key Vault de Azure):
-#   PowerShell: $env:TF_VAR_jwt_key = "..."
+#   PowerShell: $env:TF_VAR_jwt_key = "<valor-de-Jwt--Key>"
 
 # region            = "eu-west-1"
 # db_instance_class = "db.t3.micro"
