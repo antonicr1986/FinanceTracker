@@ -72,7 +72,9 @@ version by hand, set `TF_VAR_db_password` and `TF_VAR_jwt_key` and pass
 
 ### Tests
 
-They need neither an Azure nor an AWS account:
+They need neither an Azure nor an AWS account. The CI runs them on every
+push (`pester` job on Windows PowerShell 5.1, and `validate` + `terraform test`
+in the `terraform` job); if they fail, nothing is deployed to Azure:
 
 ```powershell
 Invoke-Pester .\azure-image.Tests.ps1, .\jwt-key.Tests.ps1, .\db-password.Tests.ps1
@@ -144,6 +146,5 @@ About **10 cents per hour** in total (load balancer, public IPs, Fargate 0.5 vCP
 
 ## To do
 
-- Validate this folder in CI and review Trivy's configuration warnings.
+- Review Trivy's medium and low severity warnings for this folder.
 - Move the Azure Terraform to `terraform/azure/` so both clouds are symmetrical.
-- Run the Pester and `terraform test` suites in the CI.

@@ -71,7 +71,9 @@ concreta a mano, define `TF_VAR_db_password` y `TF_VAR_jwt_key` y pasa
 
 ### Tests
 
-No necesitan cuenta de Azure ni de AWS:
+No necesitan cuenta de Azure ni de AWS. El CI los ejecuta en cada push (job
+`pester` con Windows PowerShell 5.1, y `validate` + `terraform test` en el job
+`terraform`); si fallan, no se despliega a Azure:
 
 ```powershell
 Invoke-Pester .\azure-image.Tests.ps1, .\jwt-key.Tests.ps1, .\db-password.Tests.ps1
@@ -143,6 +145,5 @@ Unos **10 céntimos por hora** entre todo (balanceador, IP publicas, Fargate 0,5
 
 ## Pendiente
 
-- Validar esta carpeta en el CI y revisar los avisos de Trivy sobre la configuracion.
+- Revisar los avisos de Trivy de severidad media y baja de esta carpeta.
 - Mover el Terraform de Azure a `terraform/azure/` para que las dos nubes queden simetricas.
-- Ejecutar los tests (Pester y `terraform test`) en el CI.

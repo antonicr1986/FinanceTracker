@@ -31,9 +31,9 @@ permissions:
   contents: read
 
 jobs:
-  # Comprueba la infraestructura como codigo sin tocar Azure: formato,
-  # validacion de la sintaxis y los tipos, y escaneo de seguridad.
-  # No necesita credenciales.
+  # Comprueba la infraestructura como codigo sin tocar Azure ni AWS: formato,
+  # validacion de la sintaxis y los tipos de las dos nubes, tests de AWS y
+  # escaneo de seguridad. No necesita credenciales.
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -49,6 +49,18 @@ jobs:
         run: terraform init -backend=false -input=false
       - name: terraform validate
         run: terraform validate
+
+      # AWS (terraform/aws): validate y terraform test. El test usa un proveedor
+      # simulado (mock_provider), asi que no necesita cuenta de AWS.
+      - name: terraform init (AWS)
+        working-directory: terraform/aws
+        run: terraform init -backend=false -input=false
+      - name: terraform validate (AWS)
+        working-directory: terraform/aws
+        run: terraform validate
+      - name: terraform test (AWS)
+        working-directory: terraform/aws
+        run: terraform test
 
       # Trivy se instala desde el repositorio oficial de Aqua Security
       # (paquete firmado), igual que en el job docker
@@ -70,6 +82,21 @@ jobs:
             --severity HIGH,CRITICAL \
             --exit-code 1 \
             .
+
+  # Tests de Pester de los scripts de AWS (up.ps1 y sus funciones). Corre en
+  # Windows con Windows PowerShell 5.1, la misma version con la que se
+  # ejecutan los scripts, para detectar lo que solo falla en 5.1.
+  pester:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Pester (terraform/aws)
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion
+          Import-Module Pester -MinimumVersion 5.0
+          Invoke-Pester -Path terraform/aws -CI -Output Detailed
 
   # Valida el chart de Helm (despliegue en Kubernetes) sin necesitar un
   # cluster: lint estricto y renderizado de las plantillas con los valores
@@ -344,11 +371,11 @@ jobs:
 
   # Despliegue a Azure App Service. Solo en push a master y solo si TODOS los
   # controles han pasado: tests, escaneo de la imagen (docker), escaneo de
-  # secretos (secrets), validacion y escaneo de seguridad de la
-  # infraestructura (terraform) y DAST activo de la API (dast-api). Si
-  # cualquiera falla, no se despliega.
+  # secretos (secrets), validacion, tests y escaneo de seguridad de la
+  # infraestructura (terraform, pester) y DAST activo de la API (dast-api).
+  # Si cualquiera falla, no se despliega.
   deploy:
-    needs: [build-and-test, docker, secrets, terraform, dast-api]
+    needs: [build-and-test, docker, secrets, terraform, pester, dast-api]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     # Incluye hasta ~15 min de reintentos del smoke test
