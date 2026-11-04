@@ -13,7 +13,11 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "main" {
   identifier     = "financetracker-db"
   engine         = "sqlserver-ex"
-  engine_version = "16.00.4305.5.v1" # SQL Server 2022
+  # Solo la version mayor (SQL Server 2022): AWS aplica las menores solo
+  # (auto_minor_version_upgrade) y no hay que perseguirlas en el codigo. Con
+  # la version exacta, un apply futuro fallaria al retirarla AWS o intentaria
+  # "volver atras" tras una actualizacion automatica.
+  engine_version = "16.00"
   license_model  = "license-included"
   instance_class = var.db_instance_class
 

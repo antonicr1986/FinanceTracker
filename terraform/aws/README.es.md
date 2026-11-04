@@ -43,7 +43,7 @@ $env:TF_VAR_db_password = "..."   # solo letras y numeros
 $env:TF_VAR_jwt_key     = "..."   # la misma que Jwt--Key en el Key Vault de Azure
 
 terraform init      # solo la primera vez
-terraform plan      # deberia decir 17 to add
+terraform plan      # deberia decir 18 to add
 terraform apply
 terraform destroy   # al terminar, para no pagar
 ```
