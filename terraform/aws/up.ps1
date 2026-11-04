@@ -102,7 +102,7 @@ try {
         if ($LASTEXITCODE -eq 0) {
             Write-Host ''
             Write-Host "API en AWS: $url"
-            Write-Host "Comprueba: $url/health/ready   (al terminar de probar: terraform destroy)"
+            Write-Host "Comprueba: $url/health/ready   (al terminar de probar: .\down.ps1)"
         }
     }
 }

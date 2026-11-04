@@ -26,6 +26,7 @@ Ficheros:
 - `ecs.tf`: cluster, roles IAM, grupo de logs y el servicio Express Mode.
 - `outputs.tf`: `api_url` y `database_host`.
 - `up.ps1`: levanta AWS con la version que ejecuta Azure (ver Uso).
+- `down.ps1`: apaga AWS (`terraform destroy` con las variables rellenas).
 - `azure-image.ps1`, `jwt-key.ps1`, `db-password.ps1`: las funciones que usa `up.ps1`, cada una con su `*.Tests.ps1`.
 - `tests/`: `terraform test` de la validacion de `container_image`.
 
@@ -48,8 +49,13 @@ cd terraform\aws
 az login            # la primera vez, con permiso de lectura sobre el Key Vault
 .\up.ps1 -Plan      # ensayo: comprueba todo y no crea nada
 .\up.ps1            # levanta AWS (Terraform ensena el plan y pide "yes")
-terraform destroy   # al terminar, para no pagar
+.\down.ps1          # al terminar, para no pagar (.\down.ps1 -Plan para ensayar)
 ```
+
+`terraform destroy` a secas pide las variables obligatorias, aunque no las use
+para borrar. `down.ps1` las rellena con valores que solo valen para eso (una
+imagen `sha-000...` ficticia y secretos aleatorios) y no lee nada de Azure, asi
+que AWS se puede apagar aunque Azure no responda.
 
 Requisitos: `az login` y un perfil del CLI de AWS llamado `financetracker` con
 la clave de acceso del usuario IAM `terraform-financetracker` (nunca la de la

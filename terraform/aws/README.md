@@ -26,6 +26,7 @@ Files:
 - `ecs.tf`: cluster, IAM roles, log group and the Express Mode service.
 - `outputs.tf`: `api_url` and `database_host`.
 - `up.ps1`: brings AWS up with the version that runs in Azure (see Usage).
+- `down.ps1`: shuts AWS down (`terraform destroy` with the variables filled in).
 - `azure-image.ps1`, `jwt-key.ps1`, `db-password.ps1`: the functions `up.ps1` uses, each with its `*.Tests.ps1`.
 - `tests/`: `terraform test` for the `container_image` validation.
 
@@ -48,8 +49,14 @@ cd terraform\aws
 az login            # first time, with read access to the Key Vault
 .\up.ps1 -Plan      # rehearsal: checks everything and creates nothing
 .\up.ps1            # brings AWS up (Terraform shows the plan and asks "yes")
-terraform destroy   # when done, to stop paying
+.\down.ps1          # when done, to stop paying (.\down.ps1 -Plan to rehearse)
 ```
+
+`terraform destroy` on its own asks for the required variables, although it
+does not use them to delete anything. `down.ps1` fills them in with values that
+are only valid for that (a placeholder `sha-000...` image and random secrets)
+and does not read anything from Azure, so AWS can be shut down even if Azure
+is not responding.
 
 Requirements: `az login` and an AWS CLI profile called `financetracker` with
 the access key of the IAM user `terraform-financetracker` (never the root
