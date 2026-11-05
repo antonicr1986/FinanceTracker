@@ -333,6 +333,12 @@ jobs:
           tags: financetracker-api:scan
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # La etapa final (apt-get upgrade) se rehace siempre: si saliera de
+          # la cache, la imagen se quedaria con los parches de Debian del dia
+          # en que se cacheo y Trivy fallaria con cada CVE nueva. La compilacion
+          # de .NET (etapa build) si sale de la cache. El paso "Push image"
+          # reutiliza esta capa recien hecha, asi que se publica lo escaneado.
+          no-cache-filters: runtime
 
       # Trivy se instala desde el repositorio oficial de Aqua Security
       # (paquete firmado), igual que se hace en un servidor
