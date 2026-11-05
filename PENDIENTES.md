@@ -36,8 +36,33 @@ devuelven 404. No vio ningún endpoint real.
   - [ ] Publicar exactamente la imagen escaneada (o desplegar por digest `@sha256:`).
   - [ ] Generar SBOM (`trivy image --format cyclonedx`).
   - [ ] Firmar la imagen / procedencia (`actions/attest-build-provenance` o cosign).
-  - [ ] Verificar el checksum de gitleaks y fijar la versión de Trivy.
+  - [x] Verificar el checksum de gitleaks (`GITLEAKS_SHA256` + `sha256sum --check` en `ci.yml`).
+  - [ ] Fijar la versión de Trivy (ahora se instala la última del repositorio apt).
   - [ ] Fijar las actions por SHA y añadir `.github/dependabot.yml` (`github-actions`, `nuget`, `docker`).
+
+## Kubernetes (Helm)
+
+Contexto: la API ya se despliega en Kubernetes con el chart `charts/financetracker`
+(PR #8), validado en el CI con `helm lint --strict` y `helm template`. Hoy el
+despliegue en el cluster es manual (`helm install` / `helm upgrade`).
+
+- [ ] **GitOps con Argo CD**: instalar Argo CD en el cluster local y crear una
+  Application que apunte a `charts/financetracker` en `master`, con *sync*
+  automatico y *self-heal*. Probar: cambiar `api.replicas` en Git, escalar a mano
+  con `kubectl` (drift corregido) y `git revert` como rollback.
+- [ ] **Imagen fijada por commit**: que el CI actualice `api.image.tag` en
+  `values.yaml` con el `sha-...` de la imagen publicada, en vez de usar `latest`
+  (necesario para que Argo CD despliegue versiones concretas). Fijar también la
+  versión del chart de Traefik (`--version`) en las instrucciones.
+- [ ] **Mantener el chart al dia con la app**: si la API necesita una variable
+  de entorno o un secreto nuevo, anadirlo tambien al chart (el lint del CI no lo detecta).
+- [ ] **Escanear el chart con Trivy** (`trivy config charts/`) y endurecer el
+  `securityContext` de los pods (no root, sistema de archivos de solo lectura).
+- [ ] Añadir al chart: HPA (con metrics-server), `topologySpreadConstraints` entre nodos y un
+  PodDisruptionBudget para la API.
+- [ ] **Sesión ACR + AKS** con el mismo chart: ACR Basic, AKS con 1 nodo (`--attach-acr`), valores de
+  producción (`sql.enabled=false` con Azure SQL, imagen por `sha-...`) e Ingress con IP pública.
+  **Crear, practicar y borrar el mismo día** (los nodos se pagan por horas).
 
 ## Repositorio
 
@@ -71,16 +96,6 @@ devuelven 404. No vio ningún endpoint real.
 - [x] Monitorización: Application Insights (OpenTelemetry) y alertas por email de 5xx y picos de 401/403 (`terraform/monitoring.tf`).
 - [ ] Enviar la auditoría de SQL al mismo Log Analytics y quitar AZU-0027 de `.trivyignore`.
 - [ ] Revisar las exclusiones de `terraform/.trivyignore` si se sube de plan (AZU-0022, AZU-0027).
-
-## Kubernetes / Helm
-
-- [ ] **Sesión ACR + AKS** con el mismo chart: ACR Basic, AKS con 1 nodo (`--attach-acr`), valores de
-  producción (`sql.enabled=false` con Azure SQL, imagen por `sha-...`) e Ingress con IP pública.
-  **Crear, practicar y borrar el mismo día** (los nodos se pagan por horas).
-- [ ] En el chart: imagen por defecto fijada a un commit (`sha-...`) en vez de `latest`, y versión
-  del chart de Traefik fijada (`--version`) en las instrucciones.
-- [ ] Añadir al chart: HPA (con metrics-server), `topologySpreadConstraints` entre nodos y un
-  PodDisruptionBudget para la API.
 
 ## Otros repositorios
 
