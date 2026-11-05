@@ -11,11 +11,13 @@ public class UserService : IUserService
 {
     private readonly AppDbContext _context;
     private readonly PasswordHasher<User> _passwordHasher;
+    private readonly IGoogleTokenValidator _googleTokenValidator;
 
-    public UserService(AppDbContext context)
+    public UserService(AppDbContext context, IGoogleTokenValidator googleTokenValidator)
     {
         _context = context;
         _passwordHasher = new PasswordHasher<User>();
+        _googleTokenValidator = googleTokenValidator;
     }
 
     public async Task<UserDto?> RegisterAsync(RegisterUserDto registerUserDto)
@@ -109,4 +111,65 @@ public class UserService : IUserService
             Email = user.Email
         };
     }
+
+    public async Task<UserDto?> GoogleLoginAsync(string idToken, string? language)
+    {
+        var identity = await _googleTokenValidator.ValidateAsync(idToken);
+
+        // Token no valido, o sin email verificado: no se puede confiar en el
+        // para vincular ni para crear la cuenta.
+        if (identity is null || !identity.EmailVerified)
+        {
+            return null;
+        }
+
+        // Primero por sub: identifica la cuenta de Google aunque cambie su email.
+        var linked = await _context.Users
+            .FirstOrDefaultAsync(user => user.GoogleSubject == identity.Subject);
+
+        if (linked is not null)
+        {
+            return ToDto(linked);
+        }
+
+        // Ya tiene cuenta con ese email: se vincula a Google guardando su sub.
+        var existing = await _context.Users
+            .FirstOrDefaultAsync(user => user.Email == identity.Email);
+
+        if (existing is not null)
+        {
+            existing.GoogleSubject = identity.Subject;
+            await _context.SaveChangesAsync();
+
+            return ToDto(existing);
+        }
+
+        var user = new User
+        {
+            Name = identity.Name,
+            Email = identity.Email,
+            GoogleSubject = identity.Subject
+        };
+
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
+
+        // Igual que en el registro: categorias de partida en el idioma del cliente.
+        _context.Categories.AddRange(DefaultCategories.ForUser(user.Id, language));
+        await _context.SaveChangesAsync();
+
+        return new UserDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email
+        };
+    }
+
+    private static UserDto ToDto(User user) => new()
+    {
+        Id = user.Id,
+        Name = user.Name,
+        Email = user.Email
+    };
 }

@@ -11,4 +11,6 @@ public interface IUserService
     Task<UserDto?> GetByIdAsync(int id);
 
     Task<UserDto?> GetByEmailAsync(string email);
+
+    Task<UserDto?> GoogleLoginAsync(string idToken, string? language);
 }
