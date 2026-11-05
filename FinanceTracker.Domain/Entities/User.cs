@@ -10,6 +10,11 @@ public class User
 
     public string PasswordHash { get; set; } = string.Empty;
 
+    /// <summary>
+    /// "sub" de Google si la cuenta se ha usado con Google; null si no.
+    /// </summary>
+    public string? GoogleSubject { get; set; }
+
     public List<Category> Categories { get; set; } = new();
 
     public List<Transaction> Transactions { get; set; } = new();
