@@ -60,6 +60,7 @@ Decisiones caras: **todo está filtrado por usuario.** Cada consulta de los serv
 <!-- Una línea por cada decisión que aplica a todo el proyecto (las propone /pair). Si es importante, detállala en docs/decisions/ con la plantilla 0000-plantilla.md. -->
 
 - Multicloud: un Terraform por nube (`terraform/` Azure, `terraform/aws/` AWS bajo demanda) con el mismo contrato (`container_image`, clave JWT → `api_url`, `database_host`). Ver [ADR 0001](docs/decisions/0001-despliegue-multicloud-terraform-por-nube.md).
+- Login con Google: cada cliente obtiene un ID token de Google y lo cambia por nuestro JWT en `POST /api/users/google`. La API acepta las audiencias `Google:ClientId` (web y Android) y `Google:DesktopClientId` (escritorio); identifica la cuenta por `GoogleSubject` y la vincula por email verificado. El secreto del cliente de escritorio no va en ningún repo: se inyecta al compilar desde un secret de GitHub.
 
 ## No tocar
 
