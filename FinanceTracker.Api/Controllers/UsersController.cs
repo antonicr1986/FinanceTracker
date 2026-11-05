@@ -81,4 +81,21 @@ public class UsersController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("google")]
+    public async Task<ActionResult<LoginResponseDto>> GoogleLogin([FromBody] GoogleLoginDto googleLoginDto)
+    {
+        var user = await _userService.GoogleLoginAsync(googleLoginDto.IdToken, googleLoginDto.Language);
+
+        if (user is null)
+        {
+            return ApiProblems.Unauthorized(
+                "invalid_google_token",
+                "Google could not verify this account.");
+        }
+
+        var response = _tokenService.CreateToken(user);
+
+        return Ok(response);
+    }
 }
