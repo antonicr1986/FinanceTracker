@@ -1,0 +1,115 @@
+name: Drift de infraestructura
+
+# Cada noche compara la infraestructura real de Azure con el codigo de Terraform.
+# Si alguien cambia algo a mano (portal, az CLI) o un apply se queda sin hacer,
+# abre una issue con el resumen y falla el job para que GitHub avise por email.
+# Usa la misma identidad OIDC de solo lectura que el plan de las PRs.
+on:
+  schedule:
+    - cron: '23 5 * * *'   # 05:23 UTC, fuera de la hora en punto (menos cola en GitHub)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: terraform-drift
+    permissions:
+      id-token: write   # token OIDC para Azure
+      contents: read
+      issues: write     # abrir / cerrar la issue de drift
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_subscription_id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_alert_email: ${{ vars.ALERT_EMAIL }}
+      TF_VAR_tenant_id: ${{ vars.AZURE_TENANT_ID }}
+      TF_VAR_key_vault_admin_object_id: ${{ vars.KEY_VAULT_ADMIN_OBJECT_ID }}
+      TF_IN_AUTOMATION: true
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: "🚨 Drift de infraestructura detectado"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      # Igual que en el plan de las PRs: la contrasena SQL es write-only y un
+      # plan nunca la envia, asi que basta un valor aleatorio enmascarado.
+      - name: Valor de relleno para la contrasena SQL
+        run: |
+          filler=$(openssl rand -hex 24)
+          echo "::add-mask::$filler"
+          echo "TF_VAR_sql_admin_password=$filler" >> "$GITHUB_ENV"
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      # -detailed-exitcode: 0 = sin cambios, 1 = error, 2 = drift.
+      # La salida completa se descarta porque incluiria secretos (app_settings).
+      - name: terraform plan (deteccion de drift)
+        id: plan
+        run: |
+          set +e
+          terraform plan -lock=false -input=false -no-color -detailed-exitcode -out=tfplan > /dev/null
+          code=$?
+          set -e
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 1 ]; then echo "::error::terraform plan ha fallado"; exit 1; fi
+
+      - name: Resumen del drift
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          changes=$(terraform show -json tfplan | jq -r '
+            .resource_changes[]
+            | select(.change.actions != ["no-op"] and .change.actions != ["read"])
+            | "| `\(.address)` | \(.change.actions | join(" + ")) |"')
+          {
+            echo "### 🚨 Drift detectado"
+            echo
+            echo "La infraestructura de Azure no coincide con el codigo de \`terraform/\`."
+            echo
+            echo "| Recurso | Accion que haria Terraform |"
+            echo "|---|---|"
+            echo "$changes"
+            echo
+            echo "**Que hacer:** ejecutar \`terraform plan\` en local para ver el detalle y decidir:"
+            echo "- si el cambio en Azure es el bueno, actualizar el codigo con una PR;"
+            echo "- si no, devolver Azure al codigo con \`terraform apply\`."
+            echo
+            echo "_Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}_"
+          } > drift.md
+          cat drift.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Abrir o actualizar la issue de drift
+        if: steps.plan.outputs.exitcode == '2'
+        run: |
+          num=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number --jq '.[0].number')
+          if [ -n "$num" ]; then
+            gh issue comment "$num" --body-file drift.md
+          else
+            gh issue create --title "$ISSUE_TITLE" --body-file drift.md
+          fi
+          echo "::error::Drift detectado: revisa la issue abierta en el repositorio"
+          exit 1
+
+      - name: Cerrar la issue si ya no hay drift
+        if: steps.plan.outputs.exitcode == '0'
+        run: |
+          num=$(gh issue list --state open --search "in:title \"$ISSUE_TITLE\"" --json number --jq '.[0].number')
+          if [ -n "$num" ]; then
+            gh issue close "$num" --comment "✅ Drift resuelto: la infraestructura vuelve a coincidir con el codigo."
+          fi
+          echo "✅ Sin drift: la infraestructura coincide con el codigo." >> "$GITHUB_STEP_SUMMARY"
