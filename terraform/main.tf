@@ -75,6 +75,8 @@ resource "azurerm_linux_web_app" "api" {
       connection_string,
       # La imagen la cambia el job deploy del CI en cada push (sha-<commit>).
       site_config[0].application_stack,
+      # Azure la añade sola para enlazar la web app con Application Insights en el portal.
+      tags["hidden-link: /app-insights-resource-id"],
     ]
   }
 }
@@ -110,8 +112,10 @@ resource "azurerm_mssql_database" "main" {
   name      = var.sql_database_name
   server_id = azurerm_mssql_server.main.id
 
-  # Valores actuales en Azure: serverless 2 vCores, pausa tras 60 min.
-  sku_name                    = "GP_S_Gen5_2"
+  # Valores actuales en Azure: serverless 1 vCore, pausa tras 60 min.
+  # Usa la oferta gratuita de Azure SQL (useFreeLimit = true, BillOverUsage):
+  # con 1 vCore el cupo de 100.000 vCore-segundos/mes dura mas.
+  sku_name                    = "GP_S_Gen5_1"
   min_capacity                = 0.5
   auto_pause_delay_in_minutes = 60
   max_size_gb                 = 32
