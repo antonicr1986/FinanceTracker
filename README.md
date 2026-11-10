@@ -344,7 +344,7 @@ IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
 
 ## ☸️ Kubernetes (Helm)
 
-The same image the pipeline publishes to GHCR can also run on any Kubernetes cluster, packaged as a Helm chart in [`charts/financetracker`](charts/financetracker). It has been tested on a local cluster (Docker Desktop); production keeps running on Azure App Service.
+The same image the pipeline publishes to GHCR can also run on any Kubernetes cluster, packaged as a Helm chart in [`charts/financetracker`](charts/financetracker). The pipeline validates it on every pull request (`helm lint --strict` and `helm template`, with the built-in database and with an external one). It is not deployed to a cluster yet: production keeps running on Azure App Service.
 
 ```mermaid
 flowchart LR
@@ -359,12 +359,12 @@ flowchart LR
 - **API as a Deployment** with 2 replicas and zero-downtime rolling updates (`maxUnavailable: 0`).
 - **Three probes**: startup (gives the migrations time), liveness on `/health` (restarts a hung process) and readiness on `/health/ready` (takes a pod out of traffic if it cannot reach the database, without restarting it).
 - **An initContainer** waits for SQL Server before the API starts, so it never tries to migrate against a database that is not ready.
-- **SQL Server as a StatefulSet** with a persistent volume: the data survives deleting the pod and even redeploying it from scratch.
+- **SQL Server as a StatefulSet** with a persistent volume, designed so the data survives deleting the pod and even redeploying it from scratch.
 - **Secrets stay out of Git**: the chart only references Secrets that already exist in the cluster.
 - **Ingress with Traefik**: the API is reached by domain, load-balanced across the ready replicas.
 - `sql.enabled: false` deploys only the API, pointing to an external database such as Azure SQL.
 
-### ▶️ Deploy
+### ▶️ How to deploy it
 
 Prerequisites: a cluster (`kubectl get nodes` → Ready), Helm and an Ingress controller (Traefik):
 
@@ -671,10 +671,9 @@ Implemented:
 Planned improvements:
 
 - More advanced budget reports
-- Controller tests
+- More controller tests
 - Localised validation messages (the ones ASP.NET generates are still English)
-- Dependency vulnerability scanning in the pipeline
-- Kubernetes deployment
+- Deploying the Helm chart to a real cluster
 
 ## 🎯 Purpose
 

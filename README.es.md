@@ -335,7 +335,7 @@ IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
 
 ## ☸️ Kubernetes (Helm)
 
-La misma imagen que el pipeline publica en GHCR puede desplegarse en cualquier cluster de Kubernetes, empaquetada como chart de Helm en [`charts/financetracker`](charts/financetracker). Esta probado en un cluster local (Docker Desktop); la produccion sigue en Azure App Service.
+La misma imagen que el pipeline publica en GHCR puede desplegarse en cualquier cluster de Kubernetes, empaquetada como chart de Helm en [`charts/financetracker`](charts/financetracker). El pipeline lo valida en cada pull request (`helm lint --strict` y `helm template`, con la base de datos incluida y con una externa). Todavia no esta desplegado en un cluster: la produccion sigue en Azure App Service.
 
 ```mermaid
 flowchart LR
@@ -350,12 +350,12 @@ flowchart LR
 - **API como Deployment** con 2 replicas y actualizaciones sin corte (`maxUnavailable: 0`).
 - **Tres sondas**: startup (da margen a las migraciones), liveness en `/health` (reinicia un proceso colgado) y readiness en `/health/ready` (saca un pod del trafico si no llega a la base de datos, sin reiniciarlo).
 - **Un initContainer** espera a SQL Server antes de arrancar la API, para que nunca intente migrar contra una base de datos que no esta lista.
-- **SQL Server como StatefulSet** con volumen persistente: los datos sobreviven a borrar el pod e incluso a redesplegarlo desde cero.
+- **SQL Server como StatefulSet** con volumen persistente, pensado para que los datos sobrevivan a borrar el pod e incluso a redesplegarlo desde cero.
 - **Los secretos no estan en Git**: el chart solo referencia Secrets que ya existen en el cluster.
 - **Ingress con Traefik**: se entra a la API por dominio, repartiendo entre las replicas listas.
 - `sql.enabled: false` despliega solo la API, apuntando a una base de datos externa como Azure SQL.
 
-### ▶️ Desplegar
+### ▶️ Cómo desplegarlo
 
 Requisitos: un cluster (`kubectl get nodes` → Ready), Helm y un Ingress controller (Traefik):
 
@@ -660,10 +660,9 @@ Implementado:
 Mejoras previstas:
 
 - Informes de presupuesto mas avanzados
-- Pruebas de controladores
+- Más pruebas de controladores
 - Mensajes de validacion traducidos (los que genera ASP.NET siguen en ingles)
-- Escaneo de vulnerabilidades de dependencias en el pipeline
-- Despliegue en Kubernetes
+- Desplegar el chart de Helm en un cluster real
 
 ## 🎯 Proposito
 
