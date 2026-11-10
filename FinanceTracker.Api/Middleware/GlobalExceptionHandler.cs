@@ -30,11 +30,14 @@ namespace FinanceTracker.Api.Middleware
         {
             // Los valores entre llaves se guardan como propiedades consultables,
             // no solo como texto dentro del mensaje.
+            // El metodo y la ruta los controla quien hace la peticion: se quitan
+            // los saltos de linea para que no pueda inventar lineas falsas en el
+            // log (log forging, CWE-117).
             _logger.LogError(
                 exception,
                 "Excepcion no controlada en {Method} {Path}",
-                httpContext.Request.Method,
-                httpContext.Request.Path);
+                SanitizeForLog(httpContext.Request.Method),
+                SanitizeForLog(httpContext.Request.Path.ToString()));
 
             var problema = new ProblemDetails
             {
@@ -49,5 +52,8 @@ namespace FinanceTracker.Api.Middleware
 
             return true;
         }
+
+        private static string SanitizeForLog(string value) =>
+            value.Replace("\r", string.Empty).Replace("\n", string.Empty);
     }
 }
