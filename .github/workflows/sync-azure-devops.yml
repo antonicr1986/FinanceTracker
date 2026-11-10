@@ -8,6 +8,11 @@ on:
     tags: ['**']
   workflow_dispatch:
 
+# Permisos minimos: solo leer el codigo. El push a Azure DevOps usa su propio
+# PAT (secret AZURE_DEVOPS_PAT), no el GITHUB_TOKEN.
+permissions:
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
