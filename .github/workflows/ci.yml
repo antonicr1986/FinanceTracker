@@ -20,6 +20,14 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  # Version fija de Trivy y SHA-256 de su .tar.gz de Linux (del checksums.txt
+  # oficial de la release). Antes se instalaba la ultima del repositorio apt,
+  # y ese repositorio solo conserva la version mas reciente: si se publicara
+  # una release maliciosa (como la 0.69.4 del 19/03/2026), el pipeline la
+  # instalaria sin avisar. Dependabot no ve esto: al actualizar, revisar las
+  # notas de la release y cambiar version y hash a la vez.
+  TRIVY_VERSION: '0.76.2'
+  TRIVY_SHA256: 'bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf'
   IMAGE_NAME: ${{ github.repository }}
   # % minimo de cobertura de lineas (el mismo valor que en CLAUDE.md)
   COVERAGE_MIN: 30
@@ -62,14 +70,17 @@ jobs:
         working-directory: terraform/aws
         run: terraform test
 
-      # Trivy se instala desde el repositorio oficial de Aqua Security
-      # (paquete firmado), igual que en el job docker
+      # Trivy: version fijada y SHA-256 comprobado (TRIVY_VERSION y TRIVY_SHA256
+      # en el env del workflow). Ver el comentario de alli.
       - name: Install Trivy
         run: |
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq trivy
+          archivo="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSfL --retry 5 --retry-delay 3 --retry-all-errors -o "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${archivo}"
+          echo "${TRIVY_SHA256}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archivo}" -C "${RUNNER_TEMP}" trivy
+          sudo mv "${RUNNER_TEMP}/trivy" /usr/local/bin/
+          trivy --version
 
       # fmt y validate solo comprueban que el codigo es correcto, no que la
       # infraestructura sea segura. Este escaneo busca malas configuraciones:
@@ -340,14 +351,17 @@ jobs:
           # reutiliza esta capa recien hecha, asi que se publica lo escaneado.
           no-cache-filters: runtime
 
-      # Trivy se instala desde el repositorio oficial de Aqua Security
-      # (paquete firmado), igual que se hace en un servidor
+      # Trivy: version fijada y SHA-256 comprobado (TRIVY_VERSION y TRIVY_SHA256
+      # en el env del workflow). Ver el comentario de alli.
       - name: Install Trivy
         run: |
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb generic main" | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq trivy
+          archivo="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSfL --retry 5 --retry-delay 3 --retry-all-errors -o "${RUNNER_TEMP}/${archivo}" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${archivo}"
+          echo "${TRIVY_SHA256}  ${RUNNER_TEMP}/${archivo}" | sha256sum --check --strict
+          tar -xzf "${RUNNER_TEMP}/${archivo}" -C "${RUNNER_TEMP}" trivy
+          sudo mv "${RUNNER_TEMP}/trivy" /usr/local/bin/
+          trivy --version
 
       # Escanea la imagen entera: no solo los paquetes NuGet (eso ya lo hace
       # "Vulnerable packages"), sino tambien las librerias del sistema operativo
