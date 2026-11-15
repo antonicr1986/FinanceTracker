@@ -35,7 +35,7 @@ Ficheros:
 Estas piezas son de la cuenta y **no se borran con `destroy`**, a proposito:
 
 1. **Bucket del estado** `financetracker-tfstate-188656931134` (versionado). Tiene que existir antes que el propio estado.
-2. **Usuario IAM** `terraform-financetracker` con su perfil de CLI `financetracker`.
+2. **IAM Identity Center** (en `eu-west-1`) con mi usuario, el conjunto de permisos `AdministratorAccess` (sesiones de 1 hora) y el perfil de CLI `financetracker`, creado con `aws configure sso`. No hay claves de acceso de larga duracion: las credenciales son temporales y para entrar se pide MFA.
 3. **Presupuesto** de 10 € con aviso por correo, creado en Billing. Si lo gestionara este codigo, cada `destroy` lo borraria, y el aviso tiene que estar siempre activo.
 
 ## Uso
@@ -47,6 +47,7 @@ aleatoria para RDS y lanza `terraform apply`:
 ```powershell
 cd terraform\aws
 az login            # la primera vez, con permiso de lectura sobre el Key Vault
+aws sso login --sso-session antonio   # credenciales temporales de AWS (1 h)
 .\up.ps1 -Plan      # ensayo: comprueba todo y no crea nada
 .\up.ps1            # levanta AWS (Terraform ensena el plan y pide "yes")
 .\down.ps1          # al terminar, para no pagar (.\down.ps1 -Plan para ensayar)
@@ -57,9 +58,10 @@ para borrar. `down.ps1` las rellena con valores que solo valen para eso (una
 imagen `sha-000...` ficticia y secretos aleatorios) y no lee nada de Azure, asi
 que AWS se puede apagar aunque Azure no responda.
 
-Requisitos: `az login` y un perfil del CLI de AWS llamado `financetracker` con
-la clave de acceso del usuario IAM `terraform-financetracker` (nunca la de la
-cuenta raiz). Los secretos solo viven como variables de entorno del proceso
+Requisitos: `az login` y un perfil del CLI de AWS llamado `financetracker`
+configurado con IAM Identity Center (`aws configure sso`), con una sesion
+activa de `aws sso login` (nunca la cuenta raiz ni claves de acceso de larga
+duracion). Los secretos solo viven como variables de entorno del proceso
 del script y se restauran al terminar.
 
 La imagen **nunca es `:latest`**, que se publica antes de pasar el DAST y

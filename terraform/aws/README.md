@@ -35,7 +35,7 @@ Files:
 These pieces belong to the account and are **not removed by `destroy`**, on purpose:
 
 1. **State bucket** `financetracker-tfstate-188656931134` (versioned). It has to exist before the state itself.
-2. **IAM user** `terraform-financetracker` with its CLI profile `financetracker`.
+2. **IAM Identity Center** (in `eu-west-1`) with my user, the `AdministratorAccess` permission set (1-hour sessions) and the CLI profile `financetracker`, created with `aws configure sso`. There are no long-lived access keys: credentials are temporary and sign-in requires MFA.
 3. **Budget** of €10 with an email alert, created in Billing. If this code managed it, every `destroy` would delete it, and the alert must always be on.
 
 ## Usage
@@ -47,6 +47,7 @@ generates a random RDS password and runs `terraform apply`:
 ```powershell
 cd terraform\aws
 az login            # first time, with read access to the Key Vault
+aws sso login --sso-session antonio   # temporary AWS credentials (1 h)
 .\up.ps1 -Plan      # rehearsal: checks everything and creates nothing
 .\up.ps1            # brings AWS up (Terraform shows the plan and asks "yes")
 .\down.ps1          # when done, to stop paying (.\down.ps1 -Plan to rehearse)
@@ -58,9 +59,10 @@ are only valid for that (a placeholder `sha-000...` image and random secrets)
 and does not read anything from Azure, so AWS can be shut down even if Azure
 is not responding.
 
-Requirements: `az login` and an AWS CLI profile called `financetracker` with
-the access key of the IAM user `terraform-financetracker` (never the root
-account). The secrets only live as environment variables of the script's
+Requirements: `az login` and an AWS CLI profile called `financetracker`
+configured with IAM Identity Center (`aws configure sso`), with an active
+session from `aws sso login` (never the root account or long-lived access
+keys). The secrets only live as environment variables of the script's
 process and are restored when it ends.
 
 The image is **never `:latest`**, which is published before the DAST scan
