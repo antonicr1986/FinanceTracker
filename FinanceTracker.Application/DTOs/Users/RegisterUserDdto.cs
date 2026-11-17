@@ -13,8 +13,10 @@ public class RegisterUserDto
     [MaxLength(150)]
     public string Email { get; set; } = string.Empty;
 
+    // 12 como minimo: la longitud es lo que mas cuesta a quien prueba
+    // contraseñas a ciegas. Los tres clientes comprueban lo mismo antes de enviar.
     [Required]
-    [MinLength(6)]
+    [MinLength(12)]
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
