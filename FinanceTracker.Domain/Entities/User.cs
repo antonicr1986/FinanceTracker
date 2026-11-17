@@ -27,6 +27,23 @@ public class User
     /// </summary>
     public DateTime? LockoutEnd { get; set; }
 
+    /// <summary>
+    /// Secreto TOTP en base32, cifrado con MfaSecretProtector. Existe desde que
+    /// se inicia la configuracion del MFA, aunque aun no este activo.
+    /// </summary>
+    public string? MfaSecret { get; set; }
+
+    /// <summary>true cuando el usuario ha confirmado su primer codigo.</summary>
+    public bool MfaEnabled { get; set; }
+
+    /// <summary>
+    /// Ultimo intervalo de 30 s cuyo codigo se acepto. Un codigo de ese
+    /// intervalo o anterior se rechaza: cada codigo vale una sola vez.
+    /// </summary>
+    public long? MfaLastUsedStep { get; set; }
+
+    public List<MfaRecoveryCode> MfaRecoveryCodes { get; set; } = new();
+
     public List<Category> Categories { get; set; } = new();
 
     public List<Transaction> Transactions { get; set; } = new();

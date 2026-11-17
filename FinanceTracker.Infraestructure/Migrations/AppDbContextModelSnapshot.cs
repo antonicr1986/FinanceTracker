@@ -87,6 +87,32 @@ namespace FinanceTracker.Infrastructure.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("FinanceTracker.Domain.Entities.MfaRecoveryCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MfaRecoveryCodes");
+                });
+
             modelBuilder.Entity("FinanceTracker.Domain.Entities.Transaction", b =>
                 {
                     b.Property<int>("Id")
@@ -145,6 +171,16 @@ namespace FinanceTracker.Infrastructure.Migrations
                     b.Property<DateTime?>("LockoutEnd")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("MfaEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("MfaLastUsedStep")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MfaSecret")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -182,6 +218,17 @@ namespace FinanceTracker.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FinanceTracker.Domain.Entities.MfaRecoveryCode", b =>
+                {
+                    b.HasOne("FinanceTracker.Domain.Entities.User", "User")
+                        .WithMany("MfaRecoveryCodes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FinanceTracker.Domain.Entities.Transaction", b =>
                 {
                     b.HasOne("FinanceTracker.Domain.Entities.Category", "Category")
@@ -209,6 +256,8 @@ namespace FinanceTracker.Infrastructure.Migrations
                     b.Navigation("Budgets");
 
                     b.Navigation("Categories");
+
+                    b.Navigation("MfaRecoveryCodes");
 
                     b.Navigation("Transactions");
                 });

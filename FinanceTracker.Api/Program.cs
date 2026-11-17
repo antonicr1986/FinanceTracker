@@ -92,6 +92,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 // Cifrado de los secretos TOTP del MFA (ver MfaSecretProtector). Sin la clave
 // la API no arranca, igual que sin Jwt:Key.
 builder.Services.AddSingleton(MfaSecretProtector.FromBase64(builder.Configuration["Mfa:EncryptionKey"]));
+builder.Services.AddScoped<IMfaService, MfaService>();
 
 // Contraseñas filtradas (Have I Been Pwned). Timeout corto: si tarda, el
 // registro sigue adelante sin la comprobacion. Add-Padding hace que todas las

@@ -22,9 +22,21 @@ public class AppDbContext : DbContext
     public DbSet<Budget> Budgets { get; set; }
 
     public DbSet<User> Users { get; set; }
+
+    public DbSet<MfaRecoveryCode> MfaRecoveryCodes { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // Base64 de nonce + tag + secreto cifrado: unos 80 caracteres.
+        modelBuilder.Entity<User>()
+            .Property(user => user.MfaSecret)
+            .HasMaxLength(200);
+
+        // SHA-256 en hexadecimal.
+        modelBuilder.Entity<MfaRecoveryCode>()
+            .Property(code => code.CodeHash)
+            .HasMaxLength(64);
 
         modelBuilder.Entity<Budget>()
             .Property(budget => budget.Amount)
