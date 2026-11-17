@@ -89,9 +89,7 @@ public class UsersController : ControllerBase
                 "Invalid email or password.");
         }
 
-        var response = _tokenService.CreateToken(user);
-
-        return Ok(response);
+        return SignIn(user);
     }
 
     [HttpPost("google")]
@@ -107,8 +105,21 @@ public class UsersController : ControllerBase
                 "Google could not verify this account.");
         }
 
-        var response = _tokenService.CreateToken(user);
+        return SignIn(user);
+    }
 
-        return Ok(response);
+    /// <summary>
+    /// Con MFA activo no se entrega el JWT: solo un token temporal (MfaChallengeDto)
+    /// para POST /api/users/mfa/verify. Vale tambien para Google: una cuenta con
+    /// contraseña y MFA que despues se vincula a Google sigue pidiendo el codigo.
+    /// </summary>
+    private ActionResult<LoginResponseDto> SignIn(UserDto user)
+    {
+        if (user.MfaEnabled)
+        {
+            return Ok(_tokenService.CreateMfaChallenge(user.Id));
+        }
+
+        return Ok(_tokenService.CreateToken(user));
     }
 }

@@ -85,7 +85,8 @@ public class UserService : IUserService
             {
                 Id = user.Id,
                 Name = user.Name,
-                Email = user.Email
+                Email = user.Email,
+                MfaEnabled = user.MfaEnabled
             })
             .FirstOrDefaultAsync();
     }
@@ -98,7 +99,8 @@ public class UserService : IUserService
             {
                 Id = user.Id,
                 Name = user.Name,
-                Email = user.Email
+                Email = user.Email,
+                MfaEnabled = user.MfaEnabled
             })
             .FirstOrDefaultAsync();
     }
@@ -154,7 +156,8 @@ public class UserService : IUserService
         {
             Id = user.Id,
             Name = user.Name,
-            Email = user.Email
+            Email = user.Email,
+            MfaEnabled = user.MfaEnabled
         };
     }
 
@@ -222,7 +225,8 @@ public class UserService : IUserService
         {
             Id = user.Id,
             Name = user.Name,
-            Email = user.Email
+            Email = user.Email,
+            MfaEnabled = user.MfaEnabled
         };
     }
 
@@ -230,6 +234,7 @@ public class UserService : IUserService
     {
         Id = user.Id,
         Name = user.Name,
-        Email = user.Email
+        Email = user.Email,
+        MfaEnabled = user.MfaEnabled
     };
 }

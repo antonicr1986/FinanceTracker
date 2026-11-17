@@ -131,6 +131,72 @@ public class MfaServiceTests
         Assert.Empty(context.MfaRecoveryCodes);
     }
 
+    // Usuario con MFA ya activo; devuelve el secreto y los codigos de recuperacion.
+    private static async Task<(User User, MfaService Service, string Secret, List<string> RecoveryCodes)> UserWithMfa(AppDbContext context)
+    {
+        var user = await AddUser(context);
+        var service = new MfaService(context, Protector);
+        var setup = await service.SetupAsync(user.Id);
+        var confirm = await service.ConfirmAsync(user.Id, CodeFor(setup.Value!.Secret, stepOffset: -1));
+
+        return (user, service, setup.Value.Secret, confirm.Value!.RecoveryCodes);
+    }
+
+    [Fact]
+    public async Task VerifyLoginAsync_ShouldAcceptAValidTotpCode()
+    {
+        using var context = CreateDbContext();
+        var (user, service, secret, _) = await UserWithMfa(context);
+
+        var result = await service.VerifyLoginAsync(user.Id, CodeFor(secret));
+
+        Assert.Equal(MfaOutcome.Success, result.Outcome);
+        Assert.Equal(user.Id, result.Value!.Id);
+    }
+
+    [Fact]
+    public async Task VerifyLoginAsync_ShouldAcceptARecoveryCode_OnlyOnce()
+    {
+        using var context = CreateDbContext();
+        var (user, service, _, recoveryCodes) = await UserWithMfa(context);
+
+        // En mayusculas y sin guiones tambien vale.
+        var typed = recoveryCodes[0].Replace("-", string.Empty).ToUpperInvariant();
+
+        Assert.Equal(MfaOutcome.Success, (await service.VerifyLoginAsync(user.Id, typed)).Outcome);
+        Assert.Equal(MfaOutcome.InvalidCode, (await service.VerifyLoginAsync(user.Id, typed)).Outcome);
+    }
+
+    [Fact]
+    public async Task VerifyLoginAsync_ShouldLockTheAccount_AfterTooManyWrongCodes()
+    {
+        using var context = CreateDbContext();
+        var (user, service, secret, _) = await UserWithMfa(context);
+
+        for (var i = 0; i < UserService.MaxFailedLogins; i++)
+        {
+            await service.VerifyLoginAsync(user.Id, "aaaa-bbbb-cccc-dddd");
+        }
+
+        // Bloqueada: ni el codigo correcto entra.
+        var result = await service.VerifyLoginAsync(user.Id, CodeFor(secret));
+
+        Assert.Equal(MfaOutcome.InvalidCode, result.Outcome);
+        Assert.True(user.LockoutEnd > DateTime.UtcNow);
+    }
+
+    [Fact]
+    public async Task VerifyLoginAsync_ShouldFail_WhenMfaIsNotEnabled()
+    {
+        using var context = CreateDbContext();
+        var user = await AddUser(context);
+        var service = new MfaService(context, Protector);
+
+        var result = await service.VerifyLoginAsync(user.Id, "123456");
+
+        Assert.Equal(MfaOutcome.NotEnabled, result.Outcome);
+    }
+
     [Fact]
     public async Task DisableAsync_ShouldRejectACodeThatWasAlreadyUsed()
     {

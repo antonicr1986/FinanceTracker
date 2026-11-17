@@ -1,5 +1,6 @@
 ﻿using FinanceTracker.Api.Controllers;
 using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Mfa;
 using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -37,6 +38,10 @@ public class UsersControllerTests
     private class FakeTokenService : ITokenService
     {
         public LoginResponseDto CreateToken(UserDto user) => new() { Token = "jwt-token", User = user };
+
+        public MfaChallengeDto CreateMfaChallenge(int userId) => new() { MfaToken = "mfa-token-" + userId };
+
+        public int? ValidateMfaChallenge(string mfaToken) => throw new NotImplementedException();
     }
 
     private static UsersController ControllerFor(int? currentUserId) =>
@@ -93,6 +98,20 @@ public class UsersControllerTests
         var response = Assert.IsType<LoginResponseDto>(ok.Value);
         Assert.Equal("jwt-token", response.Token);
         Assert.Equal(7, response.User.Id);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_ShouldReturnMfaChallengeAndNoToken_WhenMfaIsEnabled()
+    {
+        var user = new UserDto { Id = 7, Name = "María", Email = "maria@gmail.com", MfaEnabled = true };
+
+        var result = await ControllerWithGoogleUser(user)
+            .GoogleLogin(new GoogleLoginDto { IdToken = "id-token", Language = "es" });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var challenge = Assert.IsType<MfaChallengeDto>(ok.Value);
+        Assert.True(challenge.MfaRequired);
+        Assert.Equal("mfa-token-7", challenge.MfaToken);
     }
 
     [Fact]

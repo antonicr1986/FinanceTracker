@@ -1,7 +1,9 @@
 ﻿using System.Security.Cryptography;
 using System.Text;
 using FinanceTracker.Application.Common;
+using System.Text.RegularExpressions;
 using FinanceTracker.Application.DTOs.Mfa;
+using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
@@ -132,6 +134,89 @@ public class MfaService : IMfaService
         await _context.SaveChangesAsync();
 
         return MfaOutcome.Success;
+    }
+
+    public async Task<MfaResult<UserDto>> VerifyLoginAsync(int userId, string code)
+    {
+        var user = await _context.Users.FindAsync(userId);
+
+        if (user is null || !user.MfaEnabled)
+        {
+            return MfaResult<UserDto>.Fail(MfaOutcome.NotEnabled);
+        }
+
+        // Bloqueada: igual que en el login, ni el codigo bueno entra.
+        if (user.LockoutEnd > DateTime.UtcNow)
+        {
+            return MfaResult<UserDto>.Fail(MfaOutcome.InvalidCode);
+        }
+
+        var accepted = Regex.IsMatch(code, @"^\d{6}$")
+            ? AcceptTotp(user, code)
+            : await AcceptRecoveryCodeAsync(user.Id, code);
+
+        if (!accepted)
+        {
+            // Mismo contador que las contraseñas: con la contraseña robada,
+            // probar codigos tambien acaba bloqueando la cuenta.
+            user.FailedLoginCount++;
+
+            if (user.FailedLoginCount >= UserService.MaxFailedLogins)
+            {
+                user.LockoutEnd = DateTime.UtcNow.Add(UserService.LockoutDuration);
+                user.FailedLoginCount = 0;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return MfaResult<UserDto>.Fail(MfaOutcome.InvalidCode);
+        }
+
+        user.FailedLoginCount = 0;
+        user.LockoutEnd = null;
+        await _context.SaveChangesAsync();
+
+        return MfaResult<UserDto>.Ok(new UserDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Email = user.Email,
+            MfaEnabled = true
+        });
+    }
+
+    private bool AcceptTotp(User user, string code)
+    {
+        var step = MatchCode(user, code);
+
+        if (step is null)
+        {
+            return false;
+        }
+
+        user.MfaLastUsedStep = step;
+
+        return true;
+    }
+
+    // Cada codigo de recuperacion sirve una sola vez: se marca como usado.
+    private async Task<bool> AcceptRecoveryCodeAsync(int userId, string code)
+    {
+        var hash = HashRecoveryCode(code);
+
+        var recoveryCode = await _context.MfaRecoveryCodes
+            .FirstOrDefaultAsync(candidate => candidate.UserId == userId
+                && candidate.UsedAt == null
+                && candidate.CodeHash == hash);
+
+        if (recoveryCode is null)
+        {
+            return false;
+        }
+
+        recoveryCode.UsedAt = DateTime.UtcNow;
+
+        return true;
     }
 
     /// <summary>
