@@ -9,6 +9,13 @@ namespace FinanceTracker.Infrastructure.Services;
 
 public class UserService : IUserService
 {
+    // Bloqueo por cuenta: tras MaxFailedLogins contraseñas incorrectas seguidas,
+    // la cuenta no admite login con contraseña durante LockoutDuration. El
+    // limite por IP (AuthRateLimiting) no frena a quien reparte los intentos
+    // entre muchas IPs; esto si, porque cuenta por cuenta.
+    public const int MaxFailedLogins = 5;
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
     private readonly AppDbContext _context;
     private readonly PasswordHasher<User> _passwordHasher;
     private readonly IGoogleTokenValidator _googleTokenValidator;
@@ -96,6 +103,13 @@ public class UserService : IUserService
             return null;
         }
 
+        // Bloqueada: se responde igual que con una contraseña incorrecta, aunque
+        // sea la buena. Asi quien prueba contraseñas no sabe si ha acertado.
+        if (user.LockoutEnd > DateTime.UtcNow)
+        {
+            return null;
+        }
+
         var verificationResult = _passwordHasher.VerifyHashedPassword(
             user,
             user.PasswordHash,
@@ -103,7 +117,25 @@ public class UserService : IUserService
 
         if (verificationResult == PasswordVerificationResult.Failed)
         {
+            user.FailedLoginCount++;
+
+            if (user.FailedLoginCount >= MaxFailedLogins)
+            {
+                user.LockoutEnd = DateTime.UtcNow.Add(LockoutDuration);
+                user.FailedLoginCount = 0;
+            }
+
+            await _context.SaveChangesAsync();
+
             return null;
+        }
+
+        // Login correcto: se olvidan los fallos y el bloqueo ya caducado.
+        if (user.FailedLoginCount > 0 || user.LockoutEnd is not null)
+        {
+            user.FailedLoginCount = 0;
+            user.LockoutEnd = null;
+            await _context.SaveChangesAsync();
         }
 
         return new UserDto

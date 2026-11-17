@@ -297,6 +297,87 @@ public class UserServiceTests
         Assert.Null(result);
     }
 
+    // Registra antonio@test.com con contraseña "123456" para los tests de bloqueo.
+    private static async Task<UserService> ServiceWithRegisteredUser(AppDbContext context)
+    {
+        var service = CreateService(context);
+
+        await service.RegisterAsync(new RegisterUserDto
+        {
+            Name = "Antonio",
+            Email = "antonio@test.com",
+            Password = "123456"
+        });
+
+        return service;
+    }
+
+    private static Task<UserDto?> LoginWith(UserService service, string password) =>
+        service.LoginAsync(new LoginUserDto { Email = "antonio@test.com", Password = password });
+
+    [Fact]
+    public async Task LoginAsync_ShouldLockAccount_AfterMaxFailedAttempts()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        for (var i = 0; i < UserService.MaxFailedLogins; i++)
+        {
+            await LoginWith(service, "wrong-password");
+        }
+
+        // Act: ni siquiera la contraseña correcta entra mientras dura el bloqueo.
+        var result = await LoginWith(service, "123456");
+
+        // Assert
+        Assert.Null(result);
+
+        var savedUser = await context.Users.SingleAsync();
+
+        Assert.NotNull(savedUser.LockoutEnd);
+        Assert.True(savedUser.LockoutEnd > DateTime.UtcNow);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ShouldAllowLogin_WhenLockoutHasExpired()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        var user = await context.Users.SingleAsync();
+        user.LockoutEnd = DateTime.UtcNow.AddMinutes(-1);
+        await context.SaveChangesAsync();
+
+        // Act
+        var result = await LoginWith(service, "123456");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Null((await context.Users.SingleAsync()).LockoutEnd);
+    }
+
+    [Fact]
+    public async Task LoginAsync_ShouldResetFailedCount_AfterSuccessfulLogin()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        for (var i = 0; i < UserService.MaxFailedLogins - 1; i++)
+        {
+            await LoginWith(service, "wrong-password");
+        }
+
+        // Act
+        var result = await LoginWith(service, "123456");
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(0, (await context.Users.SingleAsync()).FailedLoginCount);
+    }
+
     private static async Task<List<string>> RegisterAndGetCategoryNames(string? language)
     {
         using var context = CreateDbContext();
