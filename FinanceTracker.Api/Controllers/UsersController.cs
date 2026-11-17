@@ -1,8 +1,10 @@
 ﻿using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Api.Common;
+using FinanceTracker.Api.Middleware;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FinanceTracker.Api.Controllers;
 
@@ -25,6 +27,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting(AuthRateLimiting.PolicyName)]
     public async Task<ActionResult<UserDto>> Register([FromBody] RegisterUserDto registerUserDto)
     {
         var user = await _userService.RegisterAsync(registerUserDto);
@@ -66,6 +69,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(AuthRateLimiting.PolicyName)]
     public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginUserDto loginUserDto)
     {
         var user = await _userService.LoginAsync(loginUserDto);
@@ -83,6 +87,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("google")]
+    [EnableRateLimiting(AuthRateLimiting.PolicyName)]
     public async Task<ActionResult<LoginResponseDto>> GoogleLogin([FromBody] GoogleLoginDto googleLoginDto)
     {
         var user = await _userService.GoogleLoginAsync(googleLoginDto.IdToken, googleLoginDto.Language);

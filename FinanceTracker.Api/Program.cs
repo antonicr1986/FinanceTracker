@@ -8,6 +8,7 @@ using FinanceTracker.Infrastructure.Services;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -161,6 +162,22 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// IP real del cliente. Azure (y cualquier ingress o balanceador) termina la
+// conexion y reenvia la peticion: sin esto, RemoteIpAddress seria siempre la
+// del proxy y el limite de intentos por IP seria un unico contador para todos.
+// Se toma solo la ultima entrada de X-Forwarded-For (ForwardLimit = 1 por
+// defecto), que es la que añade el proxy de Azure y el cliente no puede falsear.
+// Se vacian KnownNetworks/KnownProxies porque la IP del proxy de Azure no es fija.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// Limite de intentos en registro, login y Google. Ver Middleware/AuthRateLimiting.cs.
+builder.Services.AddAuthRateLimiting();
+
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -184,7 +201,11 @@ using (var scope = app.Services.CreateScope())
     await DemoDataSeeder.SeedAsync(db);
 }
 
-// El manejador de excepciones va el primero: envuelve a todo lo que viene
+// Lo primero, para que todo lo que viene detras (logs incluidos) vea la IP
+// real del cliente y no la del proxy.
+app.UseForwardedHeaders();
+
+// El manejador de excepciones va justo despues: envuelve a todo lo que viene
 // detras, asi ningun error se escapa sin quedar registrado.
 app.UseExceptionHandler();
 
@@ -207,6 +228,10 @@ app.UseSwaggerUI();
 // plataforma hace por HTTP, marcando la aplicacion como caida.
 
 app.UseCors("AllowFrontend");
+
+// Despues de CORS, para que la web pueda leer el 429 cuando se pase del limite.
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
