@@ -88,6 +88,17 @@ builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+
+// Contraseñas filtradas (Have I Been Pwned). Timeout corto: si tarda, el
+// registro sigue adelante sin la comprobacion. Add-Padding hace que todas las
+// respuestas midan parecido, para que el tamaño no delate el prefijo pedido.
+builder.Services.AddHttpClient<IPasswordBreachChecker, PwnedPasswordsChecker>(client =>
+{
+    client.BaseAddress = new Uri("https://api.pwnedpasswords.com/");
+    client.Timeout = TimeSpan.FromSeconds(3);
+    client.DefaultRequestHeaders.Add("Add-Padding", "true");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceTracker-Api");
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 

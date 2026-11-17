@@ -1,10 +1,11 @@
-﻿using FinanceTracker.Application.DTOs.Users;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Users;
 
 namespace FinanceTracker.Application.Interfaces;
 
 public interface IUserService
 {
-    Task<UserDto?> RegisterAsync(RegisterUserDto registerUserDto);
+    Task<RegisterUserResult> RegisterAsync(RegisterUserDto registerUserDto);
 
     Task<UserDto?> LoginAsync(LoginUserDto loginUserDto);
 

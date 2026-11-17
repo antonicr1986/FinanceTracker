@@ -1,4 +1,5 @@
 ﻿using FinanceTracker.Api.Controllers;
+using FinanceTracker.Application.Common;
 using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +25,7 @@ public class UsersControllerTests
         public Task<UserDto?> GetByIdAsync(int id) =>
             Task.FromResult<UserDto?>(new UserDto { Id = id, Name = "User " + id, Email = $"user{id}@test.com" });
 
-        public Task<UserDto?> RegisterAsync(RegisterUserDto registerUserDto) => throw new NotImplementedException();
+        public Task<RegisterUserResult> RegisterAsync(RegisterUserDto registerUserDto) => throw new NotImplementedException();
 
         public Task<UserDto?> LoginAsync(LoginUserDto loginUserDto) => throw new NotImplementedException();
 

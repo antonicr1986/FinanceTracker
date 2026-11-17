@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Users;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
@@ -18,23 +19,35 @@ public class UserService : IUserService
 
     private readonly AppDbContext _context;
     private readonly PasswordHasher<User> _passwordHasher;
+    private readonly IPasswordBreachChecker _passwordBreachChecker;
     private readonly IGoogleTokenValidator _googleTokenValidator;
 
-    public UserService(AppDbContext context, IGoogleTokenValidator googleTokenValidator)
+    public UserService(
+        AppDbContext context,
+        IPasswordBreachChecker passwordBreachChecker,
+        IGoogleTokenValidator googleTokenValidator)
     {
         _context = context;
         _passwordHasher = new PasswordHasher<User>();
+        _passwordBreachChecker = passwordBreachChecker;
         _googleTokenValidator = googleTokenValidator;
     }
 
-    public async Task<UserDto?> RegisterAsync(RegisterUserDto registerUserDto)
+    public async Task<RegisterUserResult> RegisterAsync(RegisterUserDto registerUserDto)
     {
         var emailExists = await _context.Users
             .AnyAsync(user => user.Email == registerUserDto.Email);
 
         if (emailExists)
         {
-            return null;
+            return new RegisterUserResult { Outcome = RegisterUserOutcome.EmailAlreadyExists };
+        }
+
+        // Una contraseña que ya circula en filtraciones es lo primero que se
+        // prueba en un ataque de diccionario, por larga que sea.
+        if (await _passwordBreachChecker.IsBreachedAsync(registerUserDto.Password))
+        {
+            return new RegisterUserResult { Outcome = RegisterUserOutcome.PasswordBreached };
         }
 
         var user = new User
@@ -57,11 +70,10 @@ public class UserService : IUserService
         _context.Categories.AddRange(DefaultCategories.ForUser(user.Id, registerUserDto.Language));
         await _context.SaveChangesAsync();
 
-        return new UserDto
+        return new RegisterUserResult
         {
-            Id = user.Id,
-            Name = user.Name,
-            Email = user.Email
+            Outcome = RegisterUserOutcome.Created,
+            User = ToDto(user)
         };
     }
 

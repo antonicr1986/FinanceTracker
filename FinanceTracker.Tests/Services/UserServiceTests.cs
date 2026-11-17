@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Users;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Domain.Entities;
 using FinanceTracker.Infrastructure.Data;
@@ -21,7 +22,17 @@ public class UserServiceTests
 
     // Servicio para los tests que no usan Google.
     private static UserService CreateService(AppDbContext context) =>
-        new(context, new FakeGoogleTokenValidator(null));
+        new(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(null));
+
+    // Sustituye a Have I Been Pwned en los tests: responde lo configurado.
+    private class FakeBreachChecker : IPasswordBreachChecker
+    {
+        private readonly bool _isBreached;
+
+        public FakeBreachChecker(bool isBreached) => _isBreached = isBreached;
+
+        public Task<bool> IsBreachedAsync(string password) => Task.FromResult(_isBreached);
+    }
 
     // Sustituye a Google en los tests: devuelve la identidad configurada
     // para cualquier token, o null para simular un token no valido.
@@ -53,9 +64,10 @@ public class UserServiceTests
         var result = await service.RegisterAsync(registerUserDto);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("Antonio", result.Name);
-        Assert.Equal("antonio@test.com", result.Email);
+        Assert.Equal(RegisterUserOutcome.Created, result.Outcome);
+        Assert.NotNull(result.User);
+        Assert.Equal("Antonio", result.User.Name);
+        Assert.Equal("antonio@test.com", result.User.Email);
 
         var savedUser = await context.Users.SingleAsync();
 
@@ -94,7 +106,7 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_ShouldReturnNull_WhenEmailAlreadyExists()
+    public async Task RegisterAsync_ShouldReturnEmailAlreadyExists_WhenEmailAlreadyExists()
     {
         // Arrange
         using var context = CreateDbContext();
@@ -121,8 +133,31 @@ public class UserServiceTests
         var result = await service.RegisterAsync(registerUserDto);
 
         // Assert
-        Assert.Null(result);
+        Assert.Equal(RegisterUserOutcome.EmailAlreadyExists, result.Outcome);
+        Assert.Null(result.User);
         Assert.Equal(1, await context.Users.CountAsync());
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldNotCreateUser_WhenPasswordIsBreached()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var service = new UserService(context, new FakeBreachChecker(isBreached: true), new FakeGoogleTokenValidator(null));
+
+        // Act
+        var result = await service.RegisterAsync(new RegisterUserDto
+        {
+            Name = "Antonio",
+            Email = "antonio@test.com",
+            Password = "password123456"
+        });
+
+        // Assert
+        Assert.Equal(RegisterUserOutcome.PasswordBreached, result.Outcome);
+        Assert.Null(result.User);
+        Assert.Equal(0, await context.Users.CountAsync());
     }
 
     [Fact]
@@ -392,7 +427,7 @@ public class UserServiceTests
         });
 
         return await context.Categories
-            .Where(category => category.UserId == user!.Id)
+            .Where(category => category.UserId == user.User!.Id)
             .Select(category => category.Name)
             .ToListAsync();
     }
@@ -464,7 +499,7 @@ public class UserServiceTests
         var google = new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "maria@gmail.com", EmailVerified: true, "María"));
 
-        var service = new UserService(context, google);
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
 
         // Act
         var result = await service.GoogleLoginAsync("id-token", language: "es");
@@ -488,7 +523,7 @@ public class UserServiceTests
         var google = new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "maria@gmail.com", EmailVerified: true, "María"));
 
-        var service = new UserService(context, google);
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
 
         // Act
         var result = await service.GoogleLoginAsync("id-token", language: "en");
@@ -514,7 +549,7 @@ public class UserServiceTests
         var google = new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "antonio@test.com", EmailVerified: true, "Antonio G."));
 
-        var service = new UserService(context, google);
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
 
         var existing = await service.RegisterAsync(new RegisterUserDto
         {
@@ -528,7 +563,7 @@ public class UserServiceTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal(existing!.Id, result.Id);
+        Assert.Equal(existing.User!.Id, result.Id);
 
         var savedUser = await context.Users.SingleAsync();
 
@@ -548,7 +583,7 @@ public class UserServiceTests
         var google = new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "antonio@test.com", EmailVerified: true, "Antonio G."));
 
-        var service = new UserService(context, google);
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
 
         await service.RegisterAsync(new RegisterUserDto
         {
@@ -576,13 +611,13 @@ public class UserServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var firstLogin = new UserService(context, new FakeGoogleTokenValidator(
+        var firstLogin = new UserService(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "maria@example.com", EmailVerified: true, "María")));
 
         await firstLogin.GoogleLoginAsync("id-token", language: "es");
 
         // Otra cuenta de Google (otro sub) que ahora tiene el mismo email.
-        var service = new UserService(context, new FakeGoogleTokenValidator(
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-999", "maria@example.com", EmailVerified: true, "Otra persona")));
 
         // Act
@@ -602,13 +637,13 @@ public class UserServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var firstLogin = new UserService(context, new FakeGoogleTokenValidator(
+        var firstLogin = new UserService(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "maria@gmail.com", EmailVerified: true, "María")));
 
         var created = await firstLogin.GoogleLoginAsync("id-token", language: "es");
 
         // La misma cuenta de Google (mismo sub) con otro email.
-        var service = new UserService(context, new FakeGoogleTokenValidator(
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "maria.nuevo@gmail.com", EmailVerified: true, "María")));
 
         // Act
@@ -631,7 +666,7 @@ public class UserServiceTests
         var google = new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-999", "antonio@test.com", EmailVerified: false, "Otra persona"));
 
-        var service = new UserService(context, google);
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
 
         await service.RegisterAsync(new RegisterUserDto
         {
@@ -657,7 +692,7 @@ public class UserServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new UserService(context, new FakeGoogleTokenValidator(null));
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(null));
 
         // Act
         var result = await service.GoogleLoginAsync("token-no-valido", language: "es");
@@ -675,7 +710,7 @@ public class UserServiceTests
         // Arrange
         using var context = CreateDbContext();
 
-        var service = new UserService(context, new FakeGoogleTokenValidator(
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "maria@gmail.com", EmailVerified: true, "María")));
 
         // La cuenta creada con Google no tiene contraseña.

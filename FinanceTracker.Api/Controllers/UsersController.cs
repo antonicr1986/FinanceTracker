@@ -1,4 +1,5 @@
-﻿using FinanceTracker.Application.DTOs.Users;
+﻿using FinanceTracker.Application.Common;
+using FinanceTracker.Application.DTOs.Users;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Api.Common;
 using FinanceTracker.Api.Middleware;
@@ -30,19 +31,26 @@ public class UsersController : ControllerBase
     [EnableRateLimiting(AuthRateLimiting.PolicyName)]
     public async Task<ActionResult<UserDto>> Register([FromBody] RegisterUserDto registerUserDto)
     {
-        var user = await _userService.RegisterAsync(registerUserDto);
+        var result = await _userService.RegisterAsync(registerUserDto);
 
-        if (user is null)
+        if (result.Outcome == RegisterUserOutcome.EmailAlreadyExists)
         {
             return ApiProblems.BadRequest(
                 "email_already_exists",
                 "A user with this email already exists.");
         }
 
+        if (result.Outcome == RegisterUserOutcome.PasswordBreached)
+        {
+            return ApiProblems.BadRequest(
+                "password_breached",
+                "This password has appeared in a data breach. Please choose a different one.");
+        }
+
         return CreatedAtAction(
             nameof(GetById),
-            new { id = user.Id },
-            user);
+            new { id = result.User!.Id },
+            result.User);
     }
 
     // Solo con sesion y solo los datos propios. Sin esto, cualquiera podia
