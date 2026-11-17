@@ -6,7 +6,7 @@
     terraform destroy exige las variables obligatorias aunque no las use para borrar.
     Este script las rellena con valores que no sirven para nada mas:
       - container_image: una sha-<commit> ficticia que solo cumple el formato.
-      - db_password y jwt_key: valores aleatorios que no se envian a ningun sitio.
+      - db_password, jwt_key y mfa_encryption_key: valores aleatorios que no se envian a ningun sitio.
 
     No lee nada de Azure a proposito: asi se puede apagar AWS aunque Azure no responda.
     Terraform ensena el plan de borrado y pide "yes". No toca Azure.
@@ -42,7 +42,7 @@ function Assert-ExitCode([string] $What) {
 }
 
 $saved = @{}
-foreach ($name in 'AWS_PROFILE', 'TF_VAR_jwt_key', 'TF_VAR_db_password') {
+foreach ($name in 'AWS_PROFILE', 'TF_VAR_jwt_key', 'TF_VAR_mfa_encryption_key', 'TF_VAR_db_password') {
     $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 
@@ -50,6 +50,7 @@ Push-Location $PSScriptRoot
 try {
     $env:AWS_PROFILE = $AwsProfile
     [Environment]::SetEnvironmentVariable('TF_VAR_jwt_key', (New-DbPassword -Length 64), 'Process')
+    [Environment]::SetEnvironmentVariable('TF_VAR_mfa_encryption_key', (New-DbPassword -Length 44), 'Process')
     [Environment]::SetEnvironmentVariable('TF_VAR_db_password', (New-DbPassword), 'Process')
 
     terraform init -reconfigure -input=false

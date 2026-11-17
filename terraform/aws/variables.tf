@@ -63,3 +63,20 @@ variable "jwt_key_version" {
   type        = number
   default     = 1
 }
+
+# Clave con la que la API cifra los secretos TOTP del MFA. Debe ser la MISMA
+# que en Azure: si no, en AWS nadie con MFA podria entrar (no se descifran).
+# Efimera y write-only: TF_VAR_mfa_encryption_key, nunca en tfvars.
+variable "mfa_encryption_key" {
+  description = "Clave de cifrado del MFA, 32 bytes en base64 (la misma que Mfa--EncryptionKey en el Key Vault de Azure)."
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+}
+
+# Para rotarla: nueva clave en TF_VAR_mfa_encryption_key y subir este valor en 1.
+variable "mfa_encryption_key_version" {
+  description = "Version de la clave de cifrado del MFA."
+  type        = number
+  default     = 1
+}

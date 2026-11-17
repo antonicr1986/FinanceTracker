@@ -21,8 +21,9 @@ mock_provider "aws" {
 
 # Valores de relleno para las variables obligatorias; no son secretos reales.
 variables {
-  db_password = "SoloParaTests1"
-  jwt_key     = "solo-para-tests-solo-para-tests-solo-para-tests"
+  db_password        = "SoloParaTests1"
+  jwt_key            = "solo-para-tests-solo-para-tests-solo-para-tests"
+  mfa_encryption_key = "solo-para-tests-solo-para-tests-solo-para-tests"
 }
 
 run "rechaza_latest" {

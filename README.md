@@ -381,7 +381,8 @@ kubectl create secret generic sql-secret -n financetracker \
   --from-literal=MSSQL_SA_PASSWORD='<strong-password>'
 kubectl create secret generic api-secret -n financetracker \
   --from-literal=ConnectionStrings__DefaultConnection='Server=sql;Database=FinanceTrackerDb;User Id=sa;Password=<strong-password>;TrustServerCertificate=True' \
-  --from-literal=Jwt__Key="$(openssl rand -base64 48)"
+  --from-literal=Jwt__Key="$(openssl rand -base64 48)" \
+  --from-literal=Mfa__EncryptionKey="$(openssl rand -base64 32)"
 ```
 
 Install the chart:

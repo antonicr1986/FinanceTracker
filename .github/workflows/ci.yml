@@ -531,10 +531,12 @@ jobs:
       - name: Arrancar la API y SQL Server desechables
         run: |
           jwt_key=$(openssl rand -hex 32)
+          mfa_key=$(openssl rand -base64 32)
           sa_secret="Aa1-$(openssl rand -hex 16)"
           echo "::add-mask::$jwt_key"
+          echo "::add-mask::$mfa_key"
           echo "::add-mask::$sa_secret"
-          JWT_KEY="$jwt_key" MSSQL_SA_PASSWORD="$sa_secret" docker compose up -d --build
+          JWT_KEY="$jwt_key" MFA_ENCRYPTION_KEY="$mfa_key" MSSQL_SA_PASSWORD="$sa_secret" docker compose up -d --build
 
       - name: Esperar a que la API este lista
         run: |

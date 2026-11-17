@@ -1,6 +1,6 @@
 # --- Secretos de la API: Almacen de parametros (SSM), cifrados ----------------
 # Equivalen a los secretos del Key Vault de Azure (ConnectionStrings--Default...
-# y Jwt--Key). Los valores son write-only: llegan a AWS pero no quedan en el
+# Jwt--Key y Mfa--EncryptionKey). Los valores son write-only: llegan a AWS pero no quedan en el
 # estado de Terraform. El servicio de ECS los inyecta como variables de entorno.
 # SecureString con la clave gestionada por AWS (aws/ssm): sin coste.
 
@@ -22,4 +22,13 @@ resource "aws_ssm_parameter" "jwt_key" {
 
   value_wo         = var.jwt_key
   value_wo_version = var.jwt_key_version
+}
+
+resource "aws_ssm_parameter" "mfa_encryption_key" {
+  name        = "/financetracker/Mfa__EncryptionKey"
+  description = "Clave de cifrado de los secretos TOTP del MFA"
+  type        = "SecureString"
+
+  value_wo         = var.mfa_encryption_key
+  value_wo_version = var.mfa_encryption_key_version
 }

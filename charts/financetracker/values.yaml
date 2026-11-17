@@ -39,7 +39,7 @@ waitImage: busybox:1.37
 # External Secrets / Key Vault). Aqui solo se dicen sus nombres.
 secrets:
   sql: sql-secret        # clave: MSSQL_SA_PASSWORD
-  api: api-secret        # claves: ConnectionStrings__DefaultConnection, Jwt__Key
+  api: api-secret        # claves: ConnectionStrings__DefaultConnection, Jwt__Key, Mfa__EncryptionKey
 
 ingress:
   enabled: true

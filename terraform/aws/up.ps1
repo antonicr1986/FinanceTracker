@@ -4,7 +4,8 @@
 
 .DESCRIPTION
     1. Lee de Azure la imagen sha-<commit> que esta en produccion (solo lectura).
-    2. Lee del Key Vault la clave JWT, para que las dos nubes firmen igual (solo lectura).
+    2. Lee del Key Vault la clave JWT y la del MFA, para que las dos nubes firmen y
+       descifren igual (solo lectura).
     3. Genera una contrasena aleatoria para RDS.
     4. Lanza terraform apply con esos valores. Terraform ensena el plan y pide "yes".
 
@@ -68,6 +69,13 @@ $jwtRaw = az keyvault secret show --vault-name $KeyVault --name 'Jwt--Key' --que
 Assert-ExitCode 'az keyvault secret show'
 $jwtKey = Resolve-JwtKey -Secret $jwtRaw
 
+$mfaRaw = az keyvault secret show --vault-name $KeyVault --name 'Mfa--EncryptionKey' --query value --output tsv
+Assert-ExitCode 'az keyvault secret show (Mfa--EncryptionKey)'
+if ([string]::IsNullOrWhiteSpace($mfaRaw)) {
+    throw "El Key Vault no ha devuelto la clave del MFA (Mfa--EncryptionKey)."
+}
+$mfaKey = $mfaRaw.Trim()
+
 Write-Host ''
 Write-Host "Imagen: $image"
 Write-Host 'Coste aproximado mientras este encendido: 10 centimos de euro por hora. Tarda unos 20 minutos.'
@@ -75,7 +83,7 @@ if ($Plan) { Write-Host 'Modo -Plan: no se creara nada.' }
 Write-Host ''
 
 $saved = @{}
-foreach ($name in 'AWS_PROFILE', 'TF_VAR_jwt_key', 'TF_VAR_db_password') {
+foreach ($name in 'AWS_PROFILE', 'TF_VAR_jwt_key', 'TF_VAR_mfa_encryption_key', 'TF_VAR_db_password') {
     $saved[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
 }
 
@@ -83,6 +91,7 @@ Push-Location $PSScriptRoot
 try {
     $env:AWS_PROFILE = $AwsProfile
     $env:TF_VAR_jwt_key = $jwtKey
+    $env:TF_VAR_mfa_encryption_key = $mfaKey
     # Se asigna asi para no parecer una contrasena escrita a mano a la regla de gitleaks.
     [Environment]::SetEnvironmentVariable('TF_VAR_db_password', (New-DbPassword), 'Process')
 

@@ -93,6 +93,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.api }}
                   key: Jwt__Key
+            - name: Mfa__EncryptionKey
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.api }}
+                  key: Mfa__EncryptionKey
 ---
 apiVersion: v1
 kind: Service

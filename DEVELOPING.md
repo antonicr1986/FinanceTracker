@@ -57,6 +57,7 @@ Los secretos no están en el repo. La primera vez, en
 
 ```bash
 dotnet user-secrets set "Jwt:Key" "<una clave larga, 32+ caracteres>"
+dotnet user-secrets set "Mfa:EncryptionKey" "<32 bytes en base64: openssl rand -base64 32>"
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<cadena de Azure SQL o LocalDB>"
 ```
 

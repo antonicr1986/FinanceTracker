@@ -44,13 +44,14 @@ resource "aws_iam_role_policy_attachment" "execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Solo puede leer los dos parametros de la API, no el resto del almacen.
+# Solo puede leer los parametros de la API, no el resto del almacen.
 data "aws_iam_policy_document" "read_api_secrets" {
   statement {
     actions = ["ssm:GetParameters"]
     resources = [
       aws_ssm_parameter.connection_string.arn,
       aws_ssm_parameter.jwt_key.arn,
+      aws_ssm_parameter.mfa_encryption_key.arn,
     ]
   }
 }
@@ -106,6 +107,11 @@ resource "aws_ecs_express_gateway_service" "api" {
     secret {
       name       = "Jwt__Key"
       value_from = aws_ssm_parameter.jwt_key.arn
+    }
+
+    secret {
+      name       = "Mfa__EncryptionKey"
+      value_from = aws_ssm_parameter.mfa_encryption_key.arn
     }
   }
 
