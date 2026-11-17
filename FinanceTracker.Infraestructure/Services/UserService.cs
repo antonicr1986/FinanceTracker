@@ -89,7 +89,9 @@ public class UserService : IUserService
         var user = await _context.Users
             .FirstOrDefaultAsync(user => user.Email == loginUserDto.Email);
 
-        if (user is null)
+        // Sin contraseña (cuentas que solo entran con Google, o cuya contraseña
+        // se anulo al vincularlas a Google): no se puede entrar con contraseña.
+        if (user is null || string.IsNullOrEmpty(user.PasswordHash))
         {
             return null;
         }
@@ -132,13 +134,27 @@ public class UserService : IUserService
             return ToDto(linked);
         }
 
-        // Ya tiene cuenta con ese email: se vincula a Google guardando su sub.
+        // Ya tiene cuenta con ese email.
         var existing = await _context.Users
             .FirstOrDefaultAsync(user => user.Email == identity.Email);
 
         if (existing is not null)
         {
+            // Ya vinculada a OTRA cuenta de Google: no se reasigna. Si no, quien
+            // consiguiera otra cuenta de Google con ese email se quedaria con esta.
+            if (existing.GoogleSubject is not null)
+            {
+                return null;
+            }
+
+            // El registro con contraseña no verifica el email, asi que esa
+            // contraseña pudo ponerla otra persona que se registro antes con
+            // este email para esperar a que el dueño entrase y usara la cuenta
+            // (robo de cuenta preparado de antemano). Google si demuestra que el
+            // email es de quien inicia sesion: se vincula y se anula la
+            // contraseña. Desde ahora esta cuenta entra con Google.
             existing.GoogleSubject = identity.Subject;
+            existing.PasswordHash = string.Empty;
             await _context.SaveChangesAsync();
 
             return ToDto(existing);

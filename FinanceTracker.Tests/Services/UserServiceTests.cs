@@ -455,10 +455,14 @@ public class UserServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_ShouldStillWorkWithPassword_AfterGoogleLinking()
+    public async Task LoginAsync_ShouldRejectPreviousPassword_AfterGoogleLinking()
     {
         // Arrange
         using var context = CreateDbContext();
+
+        // La cuenta con contraseña pudo crearla un atacante con el email de la
+        // victima antes que ella. Al demostrar Google que el email es suyo, esa
+        // contraseña deja de servir.
 
         var google = new FakeGoogleTokenValidator(
             new GoogleIdentity("google-sub-123", "antonio@test.com", EmailVerified: true, "Antonio G."));
@@ -482,8 +486,33 @@ public class UserServiceTests
         });
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("antonio@test.com", result.Email);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_ShouldReturnNull_WhenAccountIsLinkedToAnotherGoogleAccount()
+    {
+        // Arrange
+        using var context = CreateDbContext();
+
+        var firstLogin = new UserService(context, new FakeGoogleTokenValidator(
+            new GoogleIdentity("google-sub-123", "maria@example.com", EmailVerified: true, "María")));
+
+        await firstLogin.GoogleLoginAsync("id-token", language: "es");
+
+        // Otra cuenta de Google (otro sub) que ahora tiene el mismo email.
+        var service = new UserService(context, new FakeGoogleTokenValidator(
+            new GoogleIdentity("google-sub-999", "maria@example.com", EmailVerified: true, "Otra persona")));
+
+        // Act
+        var result = await service.GoogleLoginAsync("id-token", language: "es");
+
+        // Assert
+        Assert.Null(result);
+
+        var savedUser = await context.Users.SingleAsync();
+
+        Assert.Equal("google-sub-123", savedUser.GoogleSubject);
     }
 
     [Fact]
