@@ -52,7 +52,28 @@ public class MfaController : ControllerBase
             return ApiProblems.Unauthorized("invalid_mfa_code", "The code is not valid.");
         }
 
-        return Ok(_tokenService.CreateToken(result.Value!));
+        var response = _tokenService.CreateToken(result.Value!);
+
+        // "No volver a pedir en este dispositivo": solo despues de un codigo
+        // correcto, nunca con la contraseña sola.
+        if (mfaVerifyDto.RememberDevice)
+        {
+            response.TrustedDeviceToken = await _mfaService.TrustDeviceAsync(userId.Value);
+        }
+
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// "Olvidar todos los dispositivos": por si se pierde un movil o se uso un
+    /// ordenador ajeno. El siguiente login pide el codigo en todos.
+    /// </summary>
+    [HttpPost("forget-devices")]
+    public async Task<IActionResult> ForgetDevices()
+    {
+        await _mfaService.ForgetDevicesAsync(CurrentUserId);
+
+        return NoContent();
     }
 
     [HttpPost("setup")]

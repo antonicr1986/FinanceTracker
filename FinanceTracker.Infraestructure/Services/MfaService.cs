@@ -20,6 +20,9 @@ public class MfaService : IMfaService
 {
     public const int RecoveryCodeCount = 10;
 
+    /// <summary>Dias que un dispositivo de confianza puede entrar sin el codigo.</summary>
+    public const int TrustedDeviceDays = 30;
+
     private const string Issuer = "FinanceTracker";
 
     private readonly AppDbContext _context;
@@ -131,6 +134,11 @@ public class MfaService : IMfaService
             .ToListAsync();
 
         _context.MfaRecoveryCodes.RemoveRange(recoveryCodes);
+
+        // Sin MFA no hay codigo que saltarse: los dispositivos de confianza
+        // sobran, y si se vuelve a activar empiezan de cero.
+        _context.TrustedDevices.RemoveRange(await TrustedDevicesOf(user.Id).ToListAsync());
+
         await _context.SaveChangesAsync();
 
         return MfaOutcome.Success;
@@ -184,6 +192,62 @@ public class MfaService : IMfaService
             MfaEnabled = true
         });
     }
+
+    public async Task<string> TrustDeviceAsync(int userId)
+    {
+        var now = DateTime.UtcNow;
+
+        // De paso se limpian los caducados de esta cuenta.
+        var expired = await TrustedDevicesOf(userId)
+            .Where(device => device.ExpiresAt <= now)
+            .ToListAsync();
+        _context.TrustedDevices.RemoveRange(expired);
+
+        // 256 bits aleatorios: imposible de adivinar, y en la base de datos
+        // solo queda su hash.
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
+        _context.TrustedDevices.Add(new TrustedDevice
+        {
+            UserId = userId,
+            TokenHash = HashDeviceToken(token),
+            CreatedAt = now,
+            ExpiresAt = now.AddDays(TrustedDeviceDays)
+        });
+
+        await _context.SaveChangesAsync();
+
+        return token;
+    }
+
+    public async Task<bool> IsTrustedDeviceAsync(int userId, string? deviceToken)
+    {
+        if (string.IsNullOrWhiteSpace(deviceToken))
+        {
+            return false;
+        }
+
+        var hash = HashDeviceToken(deviceToken);
+        var now = DateTime.UtcNow;
+
+        // Atado al usuario: el token de un dispositivo no sirve para otra cuenta.
+        return await TrustedDevicesOf(userId)
+            .AnyAsync(device => device.TokenHash == hash && device.ExpiresAt > now);
+    }
+
+    public async Task ForgetDevicesAsync(int userId)
+    {
+        _context.TrustedDevices.RemoveRange(await TrustedDevicesOf(userId).ToListAsync());
+        await _context.SaveChangesAsync();
+    }
+
+    private IQueryable<TrustedDevice> TrustedDevicesOf(int userId) =>
+        _context.TrustedDevices.Where(device => device.UserId == userId);
+
+    // SHA-256, como los codigos de recuperacion: es un valor aleatorio de 256
+    // bits, no algo que alguien elige, asi que un hash rapido basta.
+    private static string HashDeviceToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token.Trim().ToUpperInvariant())));
 
     private bool AcceptTotp(User user, string code)
     {

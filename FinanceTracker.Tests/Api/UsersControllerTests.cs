@@ -44,11 +44,30 @@ public class UsersControllerTests
         public int? ValidateMfaChallenge(string mfaToken) => throw new NotImplementedException();
     }
 
+    // Solo responde si un dispositivo es de confianza: el token "trusted-device" lo es.
+    private class FakeMfaService : IMfaService
+    {
+        public Task<bool> IsTrustedDeviceAsync(int userId, string? deviceToken) =>
+            Task.FromResult(deviceToken == "trusted-device");
+
+        public Task<MfaResult<MfaSetupDto>> SetupAsync(int userId) => throw new NotImplementedException();
+
+        public Task<MfaResult<MfaRecoveryCodesDto>> ConfirmAsync(int userId, string code) => throw new NotImplementedException();
+
+        public Task<MfaOutcome> DisableAsync(int userId, string code) => throw new NotImplementedException();
+
+        public Task<MfaResult<UserDto>> VerifyLoginAsync(int userId, string code) => throw new NotImplementedException();
+
+        public Task<string> TrustDeviceAsync(int userId) => throw new NotImplementedException();
+
+        public Task ForgetDevicesAsync(int userId) => throw new NotImplementedException();
+    }
+
     private static UsersController ControllerFor(int? currentUserId) =>
-        new(new FakeUserService(), new FakeTokenService(), new FakeCurrentUser(currentUserId));
+        new(new FakeUserService(), new FakeTokenService(), new FakeMfaService(), new FakeCurrentUser(currentUserId));
 
     private static UsersController ControllerWithGoogleUser(UserDto? googleUser) =>
-        new(new FakeUserService(googleUser), new FakeTokenService(), new FakeCurrentUser(null));
+        new(new FakeUserService(googleUser), new FakeTokenService(), new FakeMfaService(), new FakeCurrentUser(null));
 
     [Fact]
     public async Task GetById_ShouldReturnOwnUser()
@@ -112,6 +131,30 @@ public class UsersControllerTests
         var challenge = Assert.IsType<MfaChallengeDto>(ok.Value);
         Assert.True(challenge.MfaRequired);
         Assert.Equal("mfa-token-7", challenge.MfaToken);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_ShouldSkipTheCode_OnATrustedDevice()
+    {
+        var user = new UserDto { Id = 7, Name = "María", Email = "maria@gmail.com", MfaEnabled = true };
+
+        var result = await ControllerWithGoogleUser(user)
+            .GoogleLogin(new GoogleLoginDto { IdToken = "id-token", TrustedDeviceToken = "trusted-device" });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal("jwt-token", Assert.IsType<LoginResponseDto>(ok.Value).Token);
+    }
+
+    [Fact]
+    public async Task GoogleLogin_ShouldStillAskForTheCode_WithAnUnknownDevice()
+    {
+        var user = new UserDto { Id = 7, Name = "María", Email = "maria@gmail.com", MfaEnabled = true };
+
+        var result = await ControllerWithGoogleUser(user)
+            .GoogleLogin(new GoogleLoginDto { IdToken = "id-token", TrustedDeviceToken = "otro-dispositivo" });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.IsType<MfaChallengeDto>(ok.Value);
     }
 
     [Fact]

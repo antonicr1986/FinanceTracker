@@ -12,4 +12,7 @@ public class MfaVerifyDto
     [Required]
     [MaxLength(32)]
     public string Code { get; set; } = string.Empty;
+
+    /// <summary>"No volver a pedir el codigo en este dispositivo durante 30 dias".</summary>
+    public bool RememberDevice { get; set; }
 }

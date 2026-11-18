@@ -20,4 +20,13 @@ public interface IMfaService
     /// cuentan para el bloqueo de la cuenta, igual que las contraseñas.
     /// </summary>
     Task<MfaResult<UserDto>> VerifyLoginAsync(int userId, string code);
+
+    /// <summary>Crea un dispositivo de confianza y devuelve su token (solo se guarda el hash).</summary>
+    Task<string> TrustDeviceAsync(int userId);
+
+    /// <summary>true si el token es de un dispositivo de confianza de este usuario y no ha caducado.</summary>
+    Task<bool> IsTrustedDeviceAsync(int userId, string? deviceToken);
+
+    /// <summary>"Olvidar todos los dispositivos": el siguiente login pide el codigo en todos.</summary>
+    Task ForgetDevicesAsync(int userId);
 }

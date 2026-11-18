@@ -198,6 +198,66 @@ public class MfaServiceTests
     }
 
     [Fact]
+    public async Task TrustDeviceAsync_ShouldStoreOnlyTheHash_AndTrustThatDevice()
+    {
+        using var context = CreateDbContext();
+        var (user, service, _, _) = await UserWithMfa(context);
+
+        var token = await service.TrustDeviceAsync(user.Id);
+
+        var stored = await context.TrustedDevices.SingleAsync();
+        Assert.NotEqual(token, stored.TokenHash);
+        Assert.True(stored.ExpiresAt > DateTime.UtcNow.AddDays(MfaService.TrustedDeviceDays - 1));
+        Assert.True(await service.IsTrustedDeviceAsync(user.Id, token));
+    }
+
+    [Fact]
+    public async Task IsTrustedDeviceAsync_ShouldReject_AnotherUserAnExpiredOrMissingToken()
+    {
+        using var context = CreateDbContext();
+        var (user, service, _, _) = await UserWithMfa(context);
+        var token = await service.TrustDeviceAsync(user.Id);
+
+        // Atado a la cuenta: el token no sirve para otro usuario.
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id + 1, token));
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id, null));
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id, "no-es-un-token"));
+
+        var stored = await context.TrustedDevices.SingleAsync();
+        stored.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+        await context.SaveChangesAsync();
+
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id, token));
+    }
+
+    [Fact]
+    public async Task ForgetDevicesAsync_ShouldStopTrustingEveryDevice()
+    {
+        using var context = CreateDbContext();
+        var (user, service, _, _) = await UserWithMfa(context);
+        var first = await service.TrustDeviceAsync(user.Id);
+        var second = await service.TrustDeviceAsync(user.Id);
+
+        await service.ForgetDevicesAsync(user.Id);
+
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id, first));
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id, second));
+        Assert.Empty(context.TrustedDevices);
+    }
+
+    [Fact]
+    public async Task DisableAsync_ShouldForgetTrustedDevices()
+    {
+        using var context = CreateDbContext();
+        var (user, service, secret, _) = await UserWithMfa(context);
+        var token = await service.TrustDeviceAsync(user.Id);
+
+        await service.DisableAsync(user.Id, CodeFor(secret));
+
+        Assert.False(await service.IsTrustedDeviceAsync(user.Id, token));
+    }
+
+    [Fact]
     public async Task DisableAsync_ShouldRejectACodeThatWasAlreadyUsed()
     {
         using var context = CreateDbContext();

@@ -16,4 +16,8 @@ public class GoogleLoginDto
     /// </summary>
     [MaxLength(10)]
     public string? Language { get; set; }
+
+    /// <summary>Igual que en el login con contraseña (LoginUserDto).</summary>
+    [MaxLength(128)]
+    public string? TrustedDeviceToken { get; set; }
 }

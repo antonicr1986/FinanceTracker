@@ -15,15 +15,18 @@ public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly ITokenService _tokenService;
+    private readonly IMfaService _mfaService;
     private readonly ICurrentUserService _currentUserService;
 
     public UsersController(
         IUserService userService,
         ITokenService tokenService,
+        IMfaService mfaService,
         ICurrentUserService currentUserService)
     {
         _userService = userService;
         _tokenService = tokenService;
+        _mfaService = mfaService;
         _currentUserService = currentUserService;
     }
 
@@ -89,7 +92,7 @@ public class UsersController : ControllerBase
                 "Invalid email or password.");
         }
 
-        return SignIn(user);
+        return await SignInAsync(user, loginUserDto.TrustedDeviceToken);
     }
 
     [HttpPost("google")]
@@ -105,17 +108,21 @@ public class UsersController : ControllerBase
                 "Google could not verify this account.");
         }
 
-        return SignIn(user);
+        return await SignInAsync(user, googleLoginDto.TrustedDeviceToken);
     }
 
     /// <summary>
     /// Con MFA activo no se entrega el JWT: solo un token temporal (MfaChallengeDto)
     /// para POST /api/users/mfa/verify. Vale tambien para Google: una cuenta con
     /// contraseña y MFA que despues se vincula a Google sigue pidiendo el codigo.
+    ///
+    /// Excepcion: un dispositivo de confianza ("no volver a pedir en este
+    /// dispositivo") entra sin el codigo. La contraseña (o Google) se ha pedido
+    /// igual: solo se salta el segundo paso.
     /// </summary>
-    private ActionResult<LoginResponseDto> SignIn(UserDto user)
+    private async Task<ActionResult<LoginResponseDto>> SignInAsync(UserDto user, string? trustedDeviceToken)
     {
-        if (user.MfaEnabled)
+        if (user.MfaEnabled && !await _mfaService.IsTrustedDeviceAsync(user.Id, trustedDeviceToken))
         {
             return Ok(_tokenService.CreateMfaChallenge(user.Id));
         }

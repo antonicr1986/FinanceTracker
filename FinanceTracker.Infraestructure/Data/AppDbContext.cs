@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { get; set; }
 
     public DbSet<MfaRecoveryCode> MfaRecoveryCodes { get; set; }
+
+    public DbSet<TrustedDevice> TrustedDevices { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -37,6 +39,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<MfaRecoveryCode>()
             .Property(code => code.CodeHash)
             .HasMaxLength(64);
+
+        // SHA-256 en hexadecimal; el indice es para la busqueda de cada login.
+        modelBuilder.Entity<TrustedDevice>()
+            .Property(device => device.TokenHash)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<TrustedDevice>()
+            .HasIndex(device => new { device.UserId, device.TokenHash });
 
         modelBuilder.Entity<Budget>()
             .Property(budget => budget.Amount)
