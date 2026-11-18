@@ -199,9 +199,12 @@ public class UserService : IUserService
             // este email para esperar a que el dueño entrase y usara la cuenta
             // (robo de cuenta preparado de antemano). Google si demuestra que el
             // email es de quien inicia sesion: se vincula y se anula la
-            // contraseña. Desde ahora esta cuenta entra con Google.
+            // contraseña. Desde ahora esta cuenta entra con Google. Tambien se
+            // cierran las sesiones abiertas con esa contraseña: si eran del
+            // atacante, sus JWT dejan de valer en ese momento.
             existing.GoogleSubject = identity.Subject;
             existing.PasswordHash = string.Empty;
+            SessionService.Revoke(existing);
             await _context.SaveChangesAsync();
 
             return ToDto(existing);

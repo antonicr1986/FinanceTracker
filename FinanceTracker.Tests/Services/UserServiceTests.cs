@@ -568,6 +568,27 @@ public class UserServiceTests
         var savedUser = await context.Users.SingleAsync();
 
         Assert.Equal("google-sub-123", savedUser.GoogleSubject);
+
+        // Las sesiones abiertas con la contraseña anulada se cierran.
+        Assert.NotNull(savedUser.SessionsRevokedAt);
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_ShouldNotRevokeSessions_WhenAccountIsAlreadyLinked()
+    {
+        using var context = CreateDbContext();
+
+        var google = new FakeGoogleTokenValidator(
+            new GoogleIdentity("google-sub-123", "antonio@test.com", EmailVerified: true, "Antonio G."));
+
+        context.Users.Add(new User { Name = "Antonio", Email = "antonio@test.com", GoogleSubject = "google-sub-123" });
+        await context.SaveChangesAsync();
+
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
+
+        await service.GoogleLoginAsync("id-token", language: "es");
+
+        Assert.Null((await context.Users.SingleAsync()).SessionsRevokedAt);
     }
 
     [Fact]

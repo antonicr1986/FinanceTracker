@@ -42,6 +42,13 @@ public class User
     /// </summary>
     public long? MfaLastUsedStep { get; set; }
 
+    /// <summary>
+    /// Momento (UTC, en segundos enteros) del ultimo "cerrar sesion en todos
+    /// los dispositivos". Los JWT emitidos antes dejan de valer aunque no hayan
+    /// caducado; null si nunca se ha hecho.
+    /// </summary>
+    public DateTime? SessionsRevokedAt { get; set; }
+
     public List<MfaRecoveryCode> MfaRecoveryCodes { get; set; } = new();
 
     public List<Category> Categories { get; set; } = new();

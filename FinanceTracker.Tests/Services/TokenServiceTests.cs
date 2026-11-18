@@ -48,6 +48,22 @@ public class TokenServiceTests
         Assert.Null(service.ValidateMfaChallenge(session.Token));
     }
 
+    [Fact]
+    public void CreateToken_ShouldIncludeTheIssuedAtClaim()
+    {
+        // Sin "iat" la API no puede saber si el token es anterior a "cerrar
+        // sesion en todos los dispositivos".
+        var session = CreateService().CreateToken(new UserDto { Id = 42, Name = "Antonio", Email = "antonio@test.com" });
+
+        var token = new JwtSecurityTokenHandler().ReadJwtToken(session.Token);
+        var iat = long.Parse(token.Claims.Single(claim => claim.Type == JwtRegisteredClaimNames.Iat).Value);
+
+        Assert.InRange(
+            DateTimeOffset.FromUnixTimeSeconds(iat).UtcDateTime,
+            DateTime.UtcNow.AddSeconds(-5),
+            DateTime.UtcNow.AddSeconds(1));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("no-es-un-jwt")]

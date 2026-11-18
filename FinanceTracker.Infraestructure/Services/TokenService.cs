@@ -35,11 +35,15 @@ public class TokenService : ITokenService
         var expirationMinutes = int.Parse(
             _configuration["Jwt:ExpirationMinutes"] ?? "60");
 
-        var expiration = DateTime.UtcNow.AddMinutes(expirationMinutes);
+        var now = DateTime.UtcNow;
+        var expiration = now.AddMinutes(expirationMinutes);
 
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            // Fecha de emision: la API la compara con SessionsRevokedAt para
+            // rechazar los tokens de antes de "cerrar sesion en todos".
+            new(JwtRegisteredClaimNames.Iat, EpochTime.GetIntDate(now).ToString(), ClaimValueTypes.Integer64),
             new(JwtRegisteredClaimNames.Email, user.Email),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(ClaimTypes.Name, user.Name)

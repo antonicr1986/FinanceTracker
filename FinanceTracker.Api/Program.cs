@@ -93,6 +93,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 // la API no arranca, igual que sin Jwt:Key.
 builder.Services.AddSingleton(MfaSecretProtector.FromBase64(builder.Configuration["Mfa:EncryptionKey"]));
 builder.Services.AddScoped<IMfaService, MfaService>();
+builder.Services.AddScoped<ISessionService, SessionService>();
 
 // Contraseñas filtradas (Have I Been Pwned). Timeout corto: si tarda, el
 // registro sigue adelante sin la comprobacion. Add-Padding hace que todas las
@@ -173,6 +174,39 @@ builder.Services
             ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        // Firma y caducidad no bastan: tras "cerrar sesion en todos los
+        // dispositivos" (o al vincular la cuenta con Google) los tokens
+        // anteriores se rechazan aunque no hayan caducado. Cuesta una consulta
+        // por peticion autenticada, por clave primaria. Sin "iat" (tokens de
+        // antes de este cambio) cuenta como emitido en 1970: valen solo si la
+        // cuenta nunca ha revocado sesiones.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var principal = context.Principal!;
+                var userIdValue = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var iatValue = principal.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Iat)?.Value;
+
+                if (!int.TryParse(userIdValue, out var userId))
+                {
+                    context.Fail("Token without user id.");
+                    return;
+                }
+
+                var issuedAt = long.TryParse(iatValue, out var iat)
+                    ? DateTimeOffset.FromUnixTimeSeconds(iat).UtcDateTime
+                    : DateTime.UnixEpoch;
+
+                var sessions = context.HttpContext.RequestServices.GetRequiredService<ISessionService>();
+
+                if (!await sessions.IsActiveAsync(userId, issuedAt))
+                {
+                    context.Fail("Session revoked.");
+                }
+            }
         };
     });
 
