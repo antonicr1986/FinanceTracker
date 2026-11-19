@@ -131,15 +131,7 @@ public class UserService : IUserService
 
         if (verificationResult == PasswordVerificationResult.Failed)
         {
-            user.FailedLoginCount++;
-
-            if (user.FailedLoginCount >= MaxFailedLogins)
-            {
-                user.LockoutEnd = DateTime.UtcNow.Add(LockoutDuration);
-                user.FailedLoginCount = 0;
-            }
-
-            await _context.SaveChangesAsync();
+            await RegisterFailedAttemptAsync(user);
 
             return null;
         }
@@ -231,6 +223,66 @@ public class UserService : IUserService
             Email = user.Email,
             MfaEnabled = user.MfaEnabled
         };
+    }
+
+    public async Task<ChangePasswordResult> ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto)
+    {
+        var user = await _context.Users.FindAsync(userId);
+
+        // Sin contraseña que cambiar (cuentas de Google) o compartida (demo).
+        if (user is null
+            || string.IsNullOrEmpty(user.PasswordHash)
+            || user.Email == DemoDataSeeder.DemoEmail)
+        {
+            return new ChangePasswordResult { Outcome = ChangePasswordOutcome.NotAvailable };
+        }
+
+        // Mismo bloqueo y mismo contador que el login: con un JWT robado no se
+        // pueden probar contraseñas aqui sin acabar bloqueando la cuenta.
+        if (user.LockoutEnd > DateTime.UtcNow)
+        {
+            return new ChangePasswordResult { Outcome = ChangePasswordOutcome.InvalidCurrentPassword };
+        }
+
+        if (_passwordHasher.VerifyHashedPassword(user, user.PasswordHash, changePasswordDto.CurrentPassword)
+            == PasswordVerificationResult.Failed)
+        {
+            await RegisterFailedAttemptAsync(user);
+
+            return new ChangePasswordResult { Outcome = ChangePasswordOutcome.InvalidCurrentPassword };
+        }
+
+        if (changePasswordDto.NewPassword == changePasswordDto.CurrentPassword)
+        {
+            return new ChangePasswordResult { Outcome = ChangePasswordOutcome.Unchanged };
+        }
+
+        if (await _passwordBreachChecker.IsBreachedAsync(changePasswordDto.NewPassword))
+        {
+            return new ChangePasswordResult { Outcome = ChangePasswordOutcome.PasswordBreached };
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, changePasswordDto.NewPassword);
+        user.FailedLoginCount = 0;
+        user.LockoutEnd = null;
+        SessionService.Revoke(user);
+        await _context.SaveChangesAsync();
+
+        return new ChangePasswordResult { Outcome = ChangePasswordOutcome.Changed, User = ToDto(user) };
+    }
+
+    // Contraseña incorrecta: cuenta para el bloqueo de la cuenta.
+    private async Task RegisterFailedAttemptAsync(User user)
+    {
+        user.FailedLoginCount++;
+
+        if (user.FailedLoginCount >= MaxFailedLogins)
+        {
+            user.LockoutEnd = DateTime.UtcNow.Add(LockoutDuration);
+            user.FailedLoginCount = 0;
+        }
+
+        await _context.SaveChangesAsync();
     }
 
     private static UserDto ToDto(User user) => new()

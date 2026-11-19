@@ -350,6 +350,77 @@ public class UserServiceTests
     private static Task<UserDto?> LoginWith(UserService service, string password) =>
         service.LoginAsync(new LoginUserDto { Email = "antonio@test.com", Password = password });
 
+    private static Task<ChangePasswordResult> ChangePassword(UserService service, string current, string next) =>
+        service.ChangePasswordAsync(1, new ChangePasswordDto { CurrentPassword = current, NewPassword = next });
+
+    [Fact]
+    public async Task ChangePasswordAsync_ShouldReplaceThePassword_AndRevokeSessions()
+    {
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        var result = await ChangePassword(service, "123456", "una-clave-nueva-larga");
+
+        Assert.Equal(ChangePasswordOutcome.Changed, result.Outcome);
+        Assert.Null(await LoginWith(service, "123456"));
+        Assert.NotNull(await LoginWith(service, "una-clave-nueva-larga"));
+        Assert.NotNull((await context.Users.SingleAsync()).SessionsRevokedAt);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_ShouldRejectAWrongCurrentPassword_AndCountItForLockout()
+    {
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        for (var i = 0; i < UserService.MaxFailedLogins; i++)
+        {
+            var result = await ChangePassword(service, "no-es-esta", "una-clave-nueva-larga");
+            Assert.Equal(ChangePasswordOutcome.InvalidCurrentPassword, result.Outcome);
+        }
+
+        // Bloqueada: ni la buena entra, ni aqui ni en el login.
+        Assert.Equal(ChangePasswordOutcome.InvalidCurrentPassword,
+            (await ChangePassword(service, "123456", "una-clave-nueva-larga")).Outcome);
+        Assert.Null(await LoginWith(service, "123456"));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_ShouldRejectTheSamePassword()
+    {
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        var result = await ChangePassword(service, "123456", "123456");
+
+        Assert.Equal(ChangePasswordOutcome.Unchanged, result.Outcome);
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_ShouldRejectABreachedPassword()
+    {
+        using var context = CreateDbContext();
+        await ServiceWithRegisteredUser(context);
+        var service = new UserService(context, new FakeBreachChecker(isBreached: true), new FakeGoogleTokenValidator(null));
+
+        var result = await ChangePassword(service, "123456", "password123456");
+
+        Assert.Equal(ChangePasswordOutcome.PasswordBreached, result.Outcome);
+        Assert.NotNull(await LoginWith(service, "123456"));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_ShouldNotBeAvailable_ForGoogleOnlyAccounts()
+    {
+        using var context = CreateDbContext();
+        context.Users.Add(new User { Name = "Antonio", Email = "antonio@gmail.com", GoogleSubject = "google-sub" });
+        await context.SaveChangesAsync();
+
+        var result = await ChangePassword(CreateService(context), "", "una-clave-nueva-larga");
+
+        Assert.Equal(ChangePasswordOutcome.NotAvailable, result.Outcome);
+    }
+
     [Fact]
     public async Task LoginAsync_ShouldLockAccount_AfterMaxFailedAttempts()
     {

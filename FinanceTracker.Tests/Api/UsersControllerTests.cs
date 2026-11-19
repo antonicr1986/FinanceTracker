@@ -33,6 +33,9 @@ public class UsersControllerTests
         public Task<UserDto?> GetByEmailAsync(string email) => throw new NotImplementedException();
 
         public Task<UserDto?> GoogleLoginAsync(string idToken, string? language) => Task.FromResult(_googleUser);
+
+        public Task<ChangePasswordResult> ChangePasswordAsync(int userId, ChangePasswordDto changePasswordDto) =>
+            throw new NotImplementedException();
     }
 
     private class FakeTokenService : ITokenService
