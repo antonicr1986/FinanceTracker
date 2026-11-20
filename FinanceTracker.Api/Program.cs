@@ -121,6 +121,7 @@ builder.Services.AddScoped<IEmailVerificationService>(services => new EmailVerif
     services.GetRequiredService<AppDbContext>(),
     services.GetRequiredService<IEmailSender>(),
     requireEmailVerification));
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 
 // Contraseñas filtradas (Have I Been Pwned). Timeout corto: si tarda, el
 // registro sigue adelante sin la comprobacion. Add-Padding hace que todas las

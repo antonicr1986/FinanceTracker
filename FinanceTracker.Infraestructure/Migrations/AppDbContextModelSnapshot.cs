@@ -233,6 +233,18 @@ namespace FinanceTracker.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("PasswordResetAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PasswordResetCodeHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("PasswordResetExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PasswordResetSentAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("SessionsRevokedAt")
                         .HasColumnType("datetime2");
 

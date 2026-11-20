@@ -20,15 +20,19 @@ public class LoggingEmailSender : IEmailSender
         _logCode = logCode;
     }
 
-    public Task SendVerificationCodeAsync(string email, string code)
+    public Task SendVerificationCodeAsync(string email, string code) => Log("Verification", email, code);
+
+    public Task SendPasswordResetCodeAsync(string email, string code) => Log("Password reset", email, code);
+
+    private Task Log(string kind, string email, string code)
     {
         if (_logCode)
         {
-            _logger.LogInformation("Email not configured. Verification code for {Email}: {Code}", email, code);
+            _logger.LogInformation("Email not configured. {Kind} code for {Email}: {Code}", kind, email, code);
         }
         else
         {
-            _logger.LogWarning("Email not configured: the verification code could not be sent.");
+            _logger.LogWarning("Email not configured: the {Kind} code could not be sent.", kind);
         }
 
         return Task.CompletedTask;

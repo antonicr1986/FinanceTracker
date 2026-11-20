@@ -21,6 +21,9 @@ public class EmailVerificationServiceTests
             Sent.Add((email, code));
             return Task.CompletedTask;
         }
+
+        public Task SendPasswordResetCodeAsync(string email, string code) =>
+            throw new InvalidOperationException("La verificacion no envia codigos de recuperacion");
     }
 
     private static AppDbContext CreateDbContext() =>

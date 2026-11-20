@@ -67,6 +67,19 @@ public class User
     /// <summary>Codigos incorrectos para el codigo actual. Al llegar al maximo deja de valer.</summary>
     public int EmailCodeAttempts { get; set; }
 
+    /// <summary>
+    /// Hash del codigo para recuperar la contraseña; null si no hay ninguno
+    /// pendiente. Separado del de verificacion: un codigo no vale para lo otro.
+    /// </summary>
+    public string? PasswordResetCodeHash { get; set; }
+
+    public DateTime? PasswordResetExpiresAt { get; set; }
+
+    /// <summary>Cuando se envio el ultimo codigo de recuperacion: limita los reenvios.</summary>
+    public DateTime? PasswordResetSentAt { get; set; }
+
+    public int PasswordResetAttempts { get; set; }
+
     public List<MfaRecoveryCode> MfaRecoveryCodes { get; set; } = new();
 
     public List<Category> Categories { get; set; } = new();
