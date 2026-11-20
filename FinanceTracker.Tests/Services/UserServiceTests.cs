@@ -463,7 +463,9 @@ public class UserServiceTests
 
         var result = await CreateService(context).RegisterAsync(new RegisterUserDto
         {
-            Name = "Otro", Email = "antonio@gmail.com", Password = "una-clave-larga"
+            Name = "Otro",
+            Email = "antonio@gmail.com",
+            Password = "una-clave-larga"
         });
 
         Assert.Equal(RegisterUserOutcome.EmailAlreadyExists, result.Outcome);
