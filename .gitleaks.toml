@@ -27,12 +27,19 @@ description = "Cadena de conexion con contrasena"
 regex = '''(?i)(?:password|pwd)\s*=\s*["']?([^;"'\s&<>$]{4,})'''
 tags = ["connection-string"]
 
-  [rules.allowlist]
+  [[rules.allowlists]]
   regexTarget = "match"
   regexes = [
     '''(?i)(tu_contrasena|tu_password|your_password|placeholder|example|changeme|xxx+|\*{3,})''',
     '''(?i)passwordchar''',
   ]
+
+  # UserDto.HasPassword: un booleano ("la cuenta tiene contrasena propia"),
+  # no una contrasena. La coincidencia de la regla empieza en "Password", asi
+  # que se mira la linea entera.
+  [[rules.allowlists]]
+  regexTarget = "line"
+  regexes = ['''\bHasPassword\s*=''']
 
 [[rules]]
 id = "hardcoded-credential"
