@@ -189,7 +189,8 @@ public class MfaService : IMfaService
             Id = user.Id,
             Name = user.Name,
             Email = user.Email,
-            MfaEnabled = true
+            MfaEnabled = true,
+            HasPassword = UserService.HasOwnPassword(user)
         });
     }
 

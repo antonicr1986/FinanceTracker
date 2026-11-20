@@ -422,6 +422,43 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task HasPassword_ShouldBeTrue_ForAnAccountRegisteredWithAPassword()
+    {
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        Assert.True((await LoginWith(service, "123456"))!.HasPassword);
+        Assert.True((await service.GetByIdAsync(1))!.HasPassword);
+    }
+
+    [Fact]
+    public async Task HasPassword_ShouldBeFalse_ForGoogleOnlyAndDemoAccounts()
+    {
+        using var context = CreateDbContext();
+        context.Users.Add(new User { Name = "Antonio", Email = "antonio@gmail.com", GoogleSubject = "google-sub" });
+        context.Users.Add(new User { Name = "Demo", Email = DemoDataSeeder.DemoEmail, PasswordHash = "hashed-password" });
+        await context.SaveChangesAsync();
+        var service = CreateService(context);
+
+        Assert.False((await service.GetByEmailAsync("antonio@gmail.com"))!.HasPassword);
+        Assert.False((await service.GetByEmailAsync(DemoDataSeeder.DemoEmail))!.HasPassword);
+    }
+
+    [Fact]
+    public async Task HasPassword_ShouldBeFalse_AfterLinkingWithGoogle()
+    {
+        using var context = CreateDbContext();
+        var google = new FakeGoogleTokenValidator(
+            new GoogleIdentity("google-sub-123", "antonio@test.com", EmailVerified: true, "Antonio G."));
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
+        await service.RegisterAsync(new RegisterUserDto { Name = "Antonio", Email = "antonio@test.com", Password = "123456" });
+
+        var linked = await service.GoogleLoginAsync("id-token", language: "es");
+
+        Assert.False(linked!.HasPassword);
+    }
+
+    [Fact]
     public async Task LoginAsync_ShouldLockAccount_AfterMaxFailedAttempts()
     {
         // Arrange

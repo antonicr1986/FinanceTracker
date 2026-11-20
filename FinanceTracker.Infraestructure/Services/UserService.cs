@@ -86,7 +86,8 @@ public class UserService : IUserService
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
-                MfaEnabled = user.MfaEnabled
+                MfaEnabled = user.MfaEnabled,
+                HasPassword = user.PasswordHash != "" && user.Email != DemoDataSeeder.DemoEmail
             })
             .FirstOrDefaultAsync();
     }
@@ -100,7 +101,8 @@ public class UserService : IUserService
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
-                MfaEnabled = user.MfaEnabled
+                MfaEnabled = user.MfaEnabled,
+                HasPassword = user.PasswordHash != "" && user.Email != DemoDataSeeder.DemoEmail
             })
             .FirstOrDefaultAsync();
     }
@@ -149,7 +151,8 @@ public class UserService : IUserService
             Id = user.Id,
             Name = user.Name,
             Email = user.Email,
-            MfaEnabled = user.MfaEnabled
+            MfaEnabled = user.MfaEnabled,
+            HasPassword = HasOwnPassword(user)
         };
     }
 
@@ -221,7 +224,8 @@ public class UserService : IUserService
             Id = user.Id,
             Name = user.Name,
             Email = user.Email,
-            MfaEnabled = user.MfaEnabled
+            MfaEnabled = user.MfaEnabled,
+            HasPassword = HasOwnPassword(user)
         };
     }
 
@@ -271,6 +275,10 @@ public class UserService : IUserService
         return new ChangePasswordResult { Outcome = ChangePasswordOutcome.Changed, User = ToDto(user) };
     }
 
+    /// <summary>Ver UserDto.HasPassword. Las consultas EF repiten la condicion: no pueden llamar a un metodo.</summary>
+    internal static bool HasOwnPassword(User user) =>
+        !string.IsNullOrEmpty(user.PasswordHash) && user.Email != DemoDataSeeder.DemoEmail;
+
     // Contraseña incorrecta: cuenta para el bloqueo de la cuenta.
     private async Task RegisterFailedAttemptAsync(User user)
     {
@@ -290,6 +298,7 @@ public class UserService : IUserService
         Id = user.Id,
         Name = user.Name,
         Email = user.Email,
-        MfaEnabled = user.MfaEnabled
+        MfaEnabled = user.MfaEnabled,
+        HasPassword = HasOwnPassword(user)
     };
 }
