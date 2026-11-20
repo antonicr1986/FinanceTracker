@@ -64,6 +64,20 @@ public class TokenServiceTests
             DateTime.UtcNow.AddSeconds(1));
     }
 
+    [Fact]
+    public void EmailVerificationChallenge_ShouldRoundTrip_AndNotWorkAsAnMfaChallenge()
+    {
+        var service = CreateService();
+
+        var challenge = service.CreateEmailVerificationChallenge(42, "antonio@test.com");
+
+        Assert.True(challenge.EmailVerificationRequired);
+        Assert.Equal("antonio@test.com", challenge.Email);
+        Assert.Equal(42, service.ValidateEmailVerificationChallenge(challenge.VerificationToken));
+        Assert.Null(service.ValidateMfaChallenge(challenge.VerificationToken));
+        Assert.Null(service.ValidateEmailVerificationChallenge(service.CreateMfaChallenge(42).MfaToken));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("no-es-un-jwt")]

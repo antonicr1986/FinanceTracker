@@ -191,6 +191,21 @@ namespace FinanceTracker.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("EmailCodeAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("EmailCodeExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmailCodeHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EmailCodeSentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("EmailVerified")
+                        .HasColumnType("bit");
+
                     b.Property<int>("FailedLoginCount")
                         .HasColumnType("int");
 

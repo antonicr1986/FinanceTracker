@@ -45,6 +45,11 @@ public class UsersControllerTests
         public MfaChallengeDto CreateMfaChallenge(int userId) => new() { MfaToken = "mfa-token-" + userId };
 
         public int? ValidateMfaChallenge(string mfaToken) => throw new NotImplementedException();
+
+        public EmailVerificationChallengeDto CreateEmailVerificationChallenge(int userId, string email) =>
+            new() { VerificationToken = "verify-token-" + userId, Email = email };
+
+        public int? ValidateEmailVerificationChallenge(string verificationToken) => throw new NotImplementedException();
     }
 
     // Solo responde si un dispositivo es de confianza: el token "trusted-device" lo es.
@@ -66,11 +71,55 @@ public class UsersControllerTests
         public Task ForgetDevicesAsync(int userId) => throw new NotImplementedException();
     }
 
-    private static UsersController ControllerFor(int? currentUserId) =>
-        new(new FakeUserService(), new FakeTokenService(), new FakeMfaService(), new FakeCurrentUser(currentUserId));
+    // Responde si el email esta verificado y apunta si se pidio enviar el codigo.
+    private class FakeEmailVerification : IEmailVerificationService
+    {
+        private readonly bool _verified;
 
-    private static UsersController ControllerWithGoogleUser(UserDto? googleUser) =>
-        new(new FakeUserService(googleUser), new FakeTokenService(), new FakeMfaService(), new FakeCurrentUser(null));
+        public FakeEmailVerification(bool verified) => _verified = verified;
+
+        public int CodesRequested { get; private set; }
+
+        public Task<bool> IsVerifiedAsync(int userId) => Task.FromResult(_verified);
+
+        public Task EnsureCodeSentAsync(int userId)
+        {
+            CodesRequested++;
+            return Task.CompletedTask;
+        }
+
+        public Task OnRegisteredAsync(int userId) => Task.CompletedTask;
+
+        public Task<EmailVerificationOutcome> ResendAsync(int userId) => throw new NotImplementedException();
+
+        public Task<EmailVerificationOutcome> VerifyAsync(int userId, string code) => throw new NotImplementedException();
+    }
+
+    private static UsersController ControllerFor(int? currentUserId) =>
+        new(new FakeUserService(), new FakeTokenService(), new FakeMfaService(), new FakeCurrentUser(currentUserId),
+            new FakeEmailVerification(verified: true));
+
+    private static UsersController ControllerWithGoogleUser(
+        UserDto? googleUser, FakeEmailVerification? emailVerification = null) =>
+        new(new FakeUserService(googleUser), new FakeTokenService(), new FakeMfaService(), new FakeCurrentUser(null),
+            emailVerification ?? new FakeEmailVerification(verified: true));
+
+    [Fact]
+    public async Task SignIn_ShouldAskForTheEmailCode_AndGiveNoToken_WhenTheEmailIsNotVerified()
+    {
+        var user = new UserDto { Id = 7, Name = "María", Email = "maria@test.com" };
+        var emailVerification = new FakeEmailVerification(verified: false);
+
+        var result = await ControllerWithGoogleUser(user, emailVerification)
+            .GoogleLogin(new GoogleLoginDto { IdToken = "id-token", Language = "es" });
+
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var challenge = Assert.IsType<EmailVerificationChallengeDto>(ok.Value);
+        Assert.True(challenge.EmailVerificationRequired);
+        Assert.Equal("verify-token-7", challenge.VerificationToken);
+        Assert.Equal("maria@test.com", challenge.Email);
+        Assert.Equal(1, emailVerification.CodesRequested);
+    }
 
     [Fact]
     public async Task GetById_ShouldReturnOwnUser()

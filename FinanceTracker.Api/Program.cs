@@ -5,6 +5,7 @@ using FinanceTracker.Api.Services;
 using FinanceTracker.Application.Interfaces;
 using FinanceTracker.Infrastructure.Data;
 using FinanceTracker.Infrastructure.Services;
+using FinanceTracker.Infrastructure.Services.Email;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -94,6 +95,32 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddSingleton(MfaSecretProtector.FromBase64(builder.Configuration["Mfa:EncryptionKey"]));
 builder.Services.AddScoped<IMfaService, MfaService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
+
+// Correo: con Email:Endpoint, Azure Communication Services autenticado con la
+// identidad administrada (DefaultAzureCredential); sin el, el codigo de
+// verificacion va al log (y solo en desarrollo se escribe el codigo).
+var emailEndpoint = builder.Configuration["Email:Endpoint"];
+if (!string.IsNullOrWhiteSpace(emailEndpoint))
+{
+    var emailSender = builder.Configuration["Email:Sender"]
+        ?? throw new InvalidOperationException("Email:Sender is not configured.");
+    var emailClient = new Azure.Communication.Email.EmailClient(
+        new Uri(emailEndpoint), new Azure.Identity.DefaultAzureCredential());
+    builder.Services.AddSingleton<IEmailSender>(new AcsEmailSender(emailClient, emailSender));
+}
+else
+{
+    var logCode = builder.Environment.IsDevelopment();
+    builder.Services.AddSingleton<IEmailSender>(services =>
+        new LoggingEmailSender(services.GetRequiredService<ILogger<LoggingEmailSender>>(), logCode));
+}
+// Interruptor: hasta configurar el correo y publicar los clientes que piden el
+// codigo, el registro y el login funcionan como antes.
+var requireEmailVerification = builder.Configuration.GetValue("Email:RequireVerification", false);
+builder.Services.AddScoped<IEmailVerificationService>(services => new EmailVerificationService(
+    services.GetRequiredService<AppDbContext>(),
+    services.GetRequiredService<IEmailSender>(),
+    requireEmailVerification));
 
 // Contraseñas filtradas (Have I Been Pwned). Timeout corto: si tarda, el
 // registro sigue adelante sin la comprobacion. Add-Padding hace que todas las

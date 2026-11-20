@@ -17,17 +17,20 @@ public class UsersController : ControllerBase
     private readonly ITokenService _tokenService;
     private readonly IMfaService _mfaService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IEmailVerificationService _emailVerification;
 
     public UsersController(
         IUserService userService,
         ITokenService tokenService,
         IMfaService mfaService,
-        ICurrentUserService currentUserService)
+        ICurrentUserService currentUserService,
+        IEmailVerificationService emailVerification)
     {
         _userService = userService;
         _tokenService = tokenService;
         _mfaService = mfaService;
         _currentUserService = currentUserService;
+        _emailVerification = emailVerification;
     }
 
     [HttpPost("register")]
@@ -49,6 +52,8 @@ public class UsersController : ControllerBase
                 "password_breached",
                 "This password has appeared in a data breach. Please choose a different one.");
         }
+
+        await _emailVerification.OnRegisteredAsync(result.User!.Id);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -158,6 +163,16 @@ public class UsersController : ControllerBase
     /// </summary>
     private async Task<ActionResult<LoginResponseDto>> SignInAsync(UserDto user, string? trustedDeviceToken)
     {
+        // Email sin verificar: no hay sesion, solo el paso del codigo. Se envia
+        // aqui (y no al registrarse) para tener un unico sitio: si el usuario
+        // cierra la app y vuelve a entrar, recibe un codigo nuevo solo si el
+        // anterior ya no vale.
+        if (!await _emailVerification.IsVerifiedAsync(user.Id))
+        {
+            await _emailVerification.EnsureCodeSentAsync(user.Id);
+            return Ok(_tokenService.CreateEmailVerificationChallenge(user.Id, user.Email));
+        }
+
         if (user.MfaEnabled && !await _mfaService.IsTrustedDeviceAsync(user.Id, trustedDeviceToken))
         {
             return Ok(_tokenService.CreateMfaChallenge(user.Id));

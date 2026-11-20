@@ -14,6 +14,10 @@ public class TokenService : ITokenService
     // Minutos para escribir el codigo del MFA tras la contraseña.
     public const int MfaChallengeMinutes = 5;
 
+    // Minutos para ir al correo y escribir el codigo de verificacion: mas que
+    // el del MFA, porque el correo puede tardar en llegar.
+    public const int EmailVerificationChallengeMinutes = 30;
+
     private readonly IConfiguration _configuration;
 
     public TokenService(IConfiguration configuration)
@@ -78,12 +82,48 @@ public class TokenService : ITokenService
     /// </summary>
     public MfaChallengeDto CreateMfaChallenge(int userId)
     {
+        var (token, expiration) = CreateChallengeToken(userId, MfaAudienceSuffix, MfaChallengeMinutes);
+
+        return new MfaChallengeDto
+        {
+            MfaToken = token,
+            Expiration = expiration
+        };
+    }
+
+    public int? ValidateMfaChallenge(string mfaToken) => ValidateChallengeToken(mfaToken, MfaAudienceSuffix);
+
+    /// <summary>
+    /// Como el del MFA, con su propia audiencia ("...:verify-email"): no sirve
+    /// como sesion ni para el paso del MFA, ni al reves.
+    /// </summary>
+    public EmailVerificationChallengeDto CreateEmailVerificationChallenge(int userId, string email)
+    {
+        var (token, expiration) = CreateChallengeToken(
+            userId, EmailVerificationAudienceSuffix, EmailVerificationChallengeMinutes);
+
+        return new EmailVerificationChallengeDto
+        {
+            VerificationToken = token,
+            Email = email,
+            Expiration = expiration
+        };
+    }
+
+    public int? ValidateEmailVerificationChallenge(string verificationToken) =>
+        ValidateChallengeToken(verificationToken, EmailVerificationAudienceSuffix);
+
+    private const string MfaAudienceSuffix = "mfa";
+    private const string EmailVerificationAudienceSuffix = "verify-email";
+
+    private (string Token, DateTime Expiration) CreateChallengeToken(int userId, string audienceSuffix, int minutes)
+    {
         var (key, issuer, audience) = ReadJwtSettings();
-        var expiration = DateTime.UtcNow.AddMinutes(MfaChallengeMinutes);
+        var expiration = DateTime.UtcNow.AddMinutes(minutes);
 
         var token = new JwtSecurityToken(
             issuer: issuer,
-            audience: MfaAudience(audience),
+            audience: $"{audience}:{audienceSuffix}",
             claims: new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
@@ -92,14 +132,10 @@ public class TokenService : ITokenService
             expires: expiration,
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
 
-        return new MfaChallengeDto
-        {
-            MfaToken = new JwtSecurityTokenHandler().WriteToken(token),
-            Expiration = expiration
-        };
+        return (new JwtSecurityTokenHandler().WriteToken(token), expiration);
     }
 
-    public int? ValidateMfaChallenge(string mfaToken)
+    private int? ValidateChallengeToken(string challengeToken, string audienceSuffix)
     {
         var (key, issuer, audience) = ReadJwtSettings();
 
@@ -110,7 +146,7 @@ public class TokenService : ITokenService
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
             ValidIssuer = issuer,
-            ValidAudience = MfaAudience(audience),
+            ValidAudience = $"{audience}:{audienceSuffix}",
             IssuerSigningKey = key,
             ClockSkew = TimeSpan.FromSeconds(30)
         };
@@ -118,7 +154,7 @@ public class TokenService : ITokenService
         try
         {
             var handler = new JwtSecurityTokenHandler { MapInboundClaims = false };
-            var principal = handler.ValidateToken(mfaToken, parameters, out _);
+            var principal = handler.ValidateToken(challengeToken, parameters, out _);
 
             return int.TryParse(principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value, out var userId)
                 ? userId
@@ -129,8 +165,6 @@ public class TokenService : ITokenService
             return null;
         }
     }
-
-    private static string MfaAudience(string audience) => $"{audience}:mfa";
 
     private (SymmetricSecurityKey Key, string Issuer, string Audience) ReadJwtSettings()
     {

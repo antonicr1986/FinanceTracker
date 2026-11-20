@@ -115,7 +115,8 @@ public class UserServiceTests
         {
             Name = "Existing user",
             Email = "antonio@test.com",
-            PasswordHash = "hashed-password"
+            PasswordHash = "hashed-password",
+            EmailVerified = true
         });
 
         await context.SaveChangesAsync();
@@ -419,6 +420,67 @@ public class UserServiceTests
         var result = await ChangePassword(CreateService(context), "", "una-clave-nueva-larga");
 
         Assert.Equal(ChangePasswordOutcome.NotAvailable, result.Outcome);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldCreateTheAccountWithTheEmailNotVerified()
+    {
+        using var context = CreateDbContext();
+        await ServiceWithRegisteredUser(context);
+
+        Assert.False((await context.Users.SingleAsync()).EmailVerified);
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldReplaceAnUnverifiedAccount_WithTheSameEmail()
+    {
+        // Alguien se registro con un email ajeno y no pudo verificarlo. El dueño
+        // del correo se registra despues: la cuenta pasa a ser suya y la
+        // contraseña del primero deja de valer.
+        using var context = CreateDbContext();
+        var service = await ServiceWithRegisteredUser(context);
+
+        var result = await service.RegisterAsync(new RegisterUserDto
+        {
+            Name = "El dueño",
+            Email = "antonio@test.com",
+            Password = "la-del-dueño-larga"
+        });
+
+        Assert.Equal(RegisterUserOutcome.Created, result.Outcome);
+        Assert.Equal(1, await context.Users.CountAsync());
+        Assert.Equal("El dueño", (await context.Users.SingleAsync()).Name);
+        Assert.Null(await LoginWith(service, "123456"));
+        Assert.NotNull(await LoginWith(service, "la-del-dueño-larga"));
+    }
+
+    [Fact]
+    public async Task RegisterAsync_ShouldNotReplaceAGoogleAccount_EvenIfNotMarkedVerified()
+    {
+        using var context = CreateDbContext();
+        context.Users.Add(new User { Name = "Antonio", Email = "antonio@gmail.com", GoogleSubject = "google-sub" });
+        await context.SaveChangesAsync();
+
+        var result = await CreateService(context).RegisterAsync(new RegisterUserDto
+        {
+            Name = "Otro", Email = "antonio@gmail.com", Password = "una-clave-larga"
+        });
+
+        Assert.Equal(RegisterUserOutcome.EmailAlreadyExists, result.Outcome);
+    }
+
+    [Fact]
+    public async Task GoogleLoginAsync_ShouldMarkTheEmailAsVerified()
+    {
+        using var context = CreateDbContext();
+        var google = new FakeGoogleTokenValidator(
+            new GoogleIdentity("google-sub-123", "antonio@test.com", EmailVerified: true, "Antonio G."));
+        var service = new UserService(context, new FakeBreachChecker(isBreached: false), google);
+        await service.RegisterAsync(new RegisterUserDto { Name = "Antonio", Email = "antonio@test.com", Password = "123456" });
+
+        await service.GoogleLoginAsync("id-token", language: "es");
+
+        Assert.True((await context.Users.SingleAsync()).EmailVerified);
     }
 
     [Fact]

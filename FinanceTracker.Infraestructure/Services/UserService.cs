@@ -35,10 +35,15 @@ public class UserService : IUserService
 
     public async Task<RegisterUserResult> RegisterAsync(RegisterUserDto registerUserDto)
     {
-        var emailExists = await _context.Users
-            .AnyAsync(user => user.Email == registerUserDto.Email);
+        var existing = await _context.Users
+            .FirstOrDefaultAsync(user => user.Email == registerUserDto.Email);
 
-        if (emailExists)
+        // Una cuenta con el email sin verificar (y sin Google) no es de nadie:
+        // nadie ha demostrado que ese correo sea suyo. Quien se registra ahora
+        // la sustituye. Si era un atacante que se adelanto con el email de otro,
+        // su contraseña deja de valer; y sin acceso al correo, tampoco podra
+        // verificar la nueva.
+        if (existing is not null && (existing.EmailVerified || existing.GoogleSubject is not null))
         {
             return new RegisterUserResult { Outcome = RegisterUserOutcome.EmailAlreadyExists };
         }
@@ -50,6 +55,24 @@ public class UserService : IUserService
             return new RegisterUserResult { Outcome = RegisterUserOutcome.PasswordBreached };
         }
 
+        if (existing is not null)
+        {
+            existing.Name = registerUserDto.Name;
+            existing.PasswordHash = _passwordHasher.HashPassword(existing, registerUserDto.Password);
+            existing.FailedLoginCount = 0;
+            existing.LockoutEnd = null;
+            EmailVerificationService.ClearCode(existing);
+            await _context.SaveChangesAsync();
+
+            return new RegisterUserResult
+            {
+                Outcome = RegisterUserOutcome.Created,
+                User = ToDto(existing)
+            };
+        }
+
+        // EmailVerified = false: el login no dara sesion hasta escribir el
+        // codigo que se envia al correo.
         var user = new User
         {
             Name = registerUserDto.Name,
@@ -173,6 +196,14 @@ public class UserService : IUserService
 
         if (linked is not null)
         {
+            // Google verifica el email: si quedaba sin verificar, ya lo esta.
+            if (!linked.EmailVerified)
+            {
+                linked.EmailVerified = true;
+                EmailVerificationService.ClearCode(linked);
+                await _context.SaveChangesAsync();
+            }
+
             return ToDto(linked);
         }
 
@@ -199,6 +230,8 @@ public class UserService : IUserService
             // atacante, sus JWT dejan de valer en ese momento.
             existing.GoogleSubject = identity.Subject;
             existing.PasswordHash = string.Empty;
+            existing.EmailVerified = true;
+            EmailVerificationService.ClearCode(existing);
             SessionService.Revoke(existing);
             await _context.SaveChangesAsync();
 
@@ -209,7 +242,8 @@ public class UserService : IUserService
         {
             Name = identity.Name,
             Email = identity.Email,
-            GoogleSubject = identity.Subject
+            GoogleSubject = identity.Subject,
+            EmailVerified = true
         };
 
         _context.Users.Add(user);

@@ -31,7 +31,8 @@ public static class DemoDataSeeder
         var user = new User
         {
             Name = DemoName,
-            Email = DemoEmail
+            Email = DemoEmail,
+            EmailVerified = true
         };
 
         user.PasswordHash = new PasswordHasher<User>()

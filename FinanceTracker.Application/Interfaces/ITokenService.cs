@@ -12,4 +12,10 @@ public interface ITokenService
 
     /// <summary>Id del usuario si el token de MFA es valido y no ha caducado; si no, null.</summary>
     int? ValidateMfaChallenge(string mfaToken);
+
+    /// <summary>Token temporal entre la contraseña y el codigo enviado por email.</summary>
+    EmailVerificationChallengeDto CreateEmailVerificationChallenge(int userId, string email);
+
+    /// <summary>Id del usuario si el token de verificacion es valido y no ha caducado; si no, null.</summary>
+    int? ValidateEmailVerificationChallenge(string verificationToken);
 }

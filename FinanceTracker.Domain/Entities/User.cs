@@ -49,6 +49,24 @@ public class User
     /// </summary>
     public DateTime? SessionsRevokedAt { get; set; }
 
+    /// <summary>
+    /// Si se ha demostrado que el email es de quien tiene la cuenta: con el
+    /// codigo que se envia al registrarse, o porque Google ya lo verifico.
+    /// Sin verificar no se entrega sesion.
+    /// </summary>
+    public bool EmailVerified { get; set; }
+
+    /// <summary>Hash del codigo de verificacion enviado por email; null si no hay ninguno pendiente.</summary>
+    public string? EmailCodeHash { get; set; }
+
+    public DateTime? EmailCodeExpiresAt { get; set; }
+
+    /// <summary>Cuando se envio el ultimo codigo: limita los reenvios.</summary>
+    public DateTime? EmailCodeSentAt { get; set; }
+
+    /// <summary>Codigos incorrectos para el codigo actual. Al llegar al maximo deja de valer.</summary>
+    public int EmailCodeAttempts { get; set; }
+
     public List<MfaRecoveryCode> MfaRecoveryCodes { get; set; } = new();
 
     public List<Category> Categories { get; set; } = new();
