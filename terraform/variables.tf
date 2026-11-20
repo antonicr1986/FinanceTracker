@@ -115,3 +115,15 @@ variable "key_vault_admin_object_id" {
   description = "Object ID de quien administra los secretos (az ad signed-in-user show --query id -o tsv)."
   type        = string
 }
+
+variable "email_service_name" {
+  description = "Nombre del Email Communication Service (global en Azure)."
+  type        = string
+  default     = "ecs-financetracker"
+}
+
+variable "communication_service_name" {
+  description = "Nombre del Communication Service (global en Azure)."
+  type        = string
+  default     = "acs-financetracker"
+}

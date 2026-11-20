@@ -16,3 +16,12 @@ output "app_insights_connection_string" {
 output "key_vault_uri" {
   value = azurerm_key_vault.main.vault_uri
 }
+
+# Valores para los app settings de la API (Email__Endpoint y Email__Sender).
+output "email_endpoint" {
+  value = "https://${azurerm_communication_service.main.hostname}"
+}
+
+output "email_sender" {
+  value = "DoNotReply@${azurerm_email_communication_service_domain.azure_managed.from_sender_domain}"
+}
