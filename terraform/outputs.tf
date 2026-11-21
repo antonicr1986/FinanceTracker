@@ -19,7 +19,7 @@ output "key_vault_uri" {
 
 # Valores para los app settings de la API (Email__Endpoint y Email__Sender).
 output "email_endpoint" {
-  value = "https://${azurerm_communication_service.main.hostname}"
+  value = "https://${azapi_resource.communication_service.output.properties.hostName}"
 }
 
 output "email_sender" {

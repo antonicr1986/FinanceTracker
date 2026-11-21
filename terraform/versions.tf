@@ -6,6 +6,11 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.0"
     }
+    # Solo para el recurso de Communication Services (ver email.tf).
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 2.0"
+    }
   }
 
   # Estado remoto en Azure Storage: cifrado, con bloqueo (lease del blob) y
@@ -30,4 +35,12 @@ provider "azurerm" {
   # registrarlos al arrancar, y la identidad del CI (solo lectura sobre el
   # grupo de recursos) no tiene permiso para hacerlo.
   resource_provider_registrations = "none"
+}
+
+# Misma identidad que azurerm (az login en local, OIDC en el CI).
+provider "azapi" {
+  subscription_id = var.subscription_id
+
+  # Como en azurerm: los proveedores de recursos ya estan registrados.
+  skip_provider_registration = true
 }
