@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cobertura de los tests (coverlet). dotnet test lo lee solo: lo enlaza
+  RunSettingsFilePath en FinanceTracker.Tests.csproj.
+
+  Se excluyen las migraciones de EF: son codigo generado por dotnet ef que
+  describe los cambios de la base de datos, no logica de la aplicacion, y no
+  tiene sentido probarlas con tests unitarios. Contaban mas de la mitad de las
+  lineas medidas, y cada migracion nueva bajaba el porcentaje sin que el codigo
+  real estuviera peor probado.
+-->
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat code coverage">
+        <Configuration>
+          <ExcludeByFile>**/Migrations/*.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

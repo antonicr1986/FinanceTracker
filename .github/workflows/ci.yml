@@ -29,8 +29,9 @@ env:
   TRIVY_VERSION: '0.76.2'
   TRIVY_SHA256: 'bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf'
   IMAGE_NAME: ${{ github.repository }}
-  # % minimo de cobertura de lineas (el mismo valor que en CLAUDE.md)
-  COVERAGE_MIN: 30
+  # % minimo de cobertura de lineas (el mismo valor que en CLAUDE.md). Sin las
+  # migraciones de EF (ver FinanceTracker.Tests/coverage.runsettings).
+  COVERAGE_MIN: 75
 
 # Permisos minimos por defecto para el GITHUB_TOKEN en todos los jobs: solo
 # lectura del codigo. Los jobs que necesitan mas (docker, terraform-plan) lo

@@ -7,6 +7,9 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+
+    <!-- Cobertura sin las migraciones de EF: ver coverage.runsettings. -->
+    <RunSettingsFilePath>$(MSBuildProjectDirectory)/coverage.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <ItemGroup>

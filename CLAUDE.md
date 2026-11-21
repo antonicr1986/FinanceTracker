@@ -49,7 +49,7 @@ Decisiones caras: **todo está filtrado por usuario.** Cada consulta de los serv
 ## CI/CD
 
 - Pipelines: `.github/workflows/ci.yml` (GitHub Actions, el que bloquea y despliega) y `azure-pipelines.yml` (espejo en Azure DevOps).
-- El CI exige: formato según `.editorconfig`, ningún paquete NuGet vulnerable, compilar en Release, que pasen los tests, cobertura de líneas ≥ 30 %, ningún secreto en el código ni en el historial (gitleaks), Terraform y Helm válidos, imagen sin vulnerabilidades altas (Trivy) y DAST de la API (ZAP).
+- El CI exige: formato según `.editorconfig`, ningún paquete NuGet vulnerable, compilar en Release, que pasen los tests, cobertura de líneas ≥ 75 % (sin contar las migraciones de EF), ningún secreto en el código ni en el historial (gitleaks), Terraform y Helm válidos, imagen sin vulnerabilidades altas (Trivy) y DAST de la API (ZAP).
 - Antes de proponer un commit, ejecuta `dotnet format` y `dotnet test` en local.
 - Entorno: producción. Un push a `master` despliega la imagen de GHCR al App Service de Azure, sin paso manual.
 - No modifiques el pipeline sin avisarme.
