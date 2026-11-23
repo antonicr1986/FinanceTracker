@@ -310,6 +310,12 @@ app.UseCors("AllowFrontend");
 // Despues de CORS, para que la web pueda leer el 429 cuando se pase del limite.
 app.UseRateLimiter();
 
+// Version minima de cliente por plataforma (ClientVersions:Minimum:<plataforma>):
+// 426 si la app es demasiado antigua. Despues de CORS, para que la web pueda
+// leer el 426, y antes de autenticar, para no gastar trabajo en una app que no
+// va a poder seguir. Ver Middleware/ClientVersionCheck.cs.
+app.Use((context, next) => ClientVersionCheck.InvokeAsync(context, app.Configuration, next));
+
 app.UseAuthentication();
 app.UseAuthorization();
 

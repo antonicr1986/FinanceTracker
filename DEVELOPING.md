@@ -112,6 +112,19 @@ No hace falta aplicarla a mano: se aplica al siguiente arranque.
 5. **El hook de gitleaks bloquea el commit** en cuanto huele a credencial. La
    salida es anotar la línea con `// gitleaks:allow`, nunca `--no-verify`.
 
+6. **Versión mínima de cliente.** Las apps envían `X-Client-Platform`
+   (`web`, `android` o `desktop`) y `X-Client-Version` (`1.12.0`). Si la
+   versión es menor que `ClientVersions:Minimum:<plataforma>`, la API responde
+   **426** con `minimumVersion` y la app pide actualizar. Sin valor configurado,
+   sin cabeceras o con una versión ilegible, no se exige nada; `/health` y
+   Swagger nunca se cortan. Se sube **solo** antes de activar un cambio que
+   rompe versiones antiguas, como variable de entorno del App Service:
+   `ClientVersions__Minimum__desktop=1.12.0`.
+
+7. **En este PC, `dotnet test` no ejecuta nada**: Smart App Control bloquea la
+   DLL de los tests (total: 0). Se ejecutan en Docker con `.\scripts\test.ps1`
+   (todos) o `.\scripts\test.ps1 <texto>` (filtrados).
+
 ## Antes de pushear
 
 ```bash
