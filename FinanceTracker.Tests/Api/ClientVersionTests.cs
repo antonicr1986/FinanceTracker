@@ -19,8 +19,16 @@ public class ClientVersionTests
         var context = new DefaultHttpContext();
         context.Request.Path = path;
         context.Response.Body = new MemoryStream();
-        if (platform is not null) context.Request.Headers["X-Client-Platform"] = platform;
-        if (version is not null) context.Request.Headers["X-Client-Version"] = version;
+        if (platform is not null)
+        {
+            context.Request.Headers["X-Client-Platform"] = platform;
+        }
+
+        if (version is not null)
+        {
+            context.Request.Headers["X-Client-Version"] = version;
+        }
+
         return context;
     }
 
@@ -47,7 +55,9 @@ public class ClientVersionTests
         // Assert
         Assert.False(nextCalled);
         Assert.Equal(StatusCodes.Status426UpgradeRequired, context.Response.StatusCode);
-        Assert.Contains("1.12.0", await BodyOf(context));
+        var body = await BodyOf(context);
+        Assert.Contains("\"code\":\"client_version_unsupported\"", body);
+        Assert.Contains("\"minimumVersion\":\"1.12.0\"", body);
     }
 
     [Fact]
