@@ -33,9 +33,15 @@ public static class ClientVersionCheck
                 new ProblemDetails
                 {
                     Status = StatusCodes.Status426UpgradeRequired,
-                    Title = "Client version not supported",
+                    // Mismo formato que ApiProblems: Title y "code" con el codigo estable
+                    // que leen las apps; minimumVersion para mostrar a cual actualizar.
+                    Title = "client_version_unsupported",
                     Detail = $"Update the app to version {minimum} or later.",
-                    Extensions = { ["minimumVersion"] = minimum.ToString() },
+                    Extensions =
+                    {
+                        ["code"] = "client_version_unsupported",
+                        ["minimumVersion"] = minimum.ToString(),
+                    },
                 },
                 options: null,
                 contentType: "application/problem+json");
