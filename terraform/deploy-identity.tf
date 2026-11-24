@@ -27,7 +27,7 @@ resource "azurerm_federated_identity_credential" "deploy_production" {
   audience            = ["api://AzureADTokenExchange"]
   issuer              = "https://token.actions.githubusercontent.com"
   # Solo los jobs del environment production de este repo.
-  subject             = "repo:${var.github_repository}:environment:production"
+  subject = "repo:${var.github_repository}:environment:production"
 }
 
 resource "azurerm_role_assignment" "deploy_web_app" {
