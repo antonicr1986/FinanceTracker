@@ -26,6 +26,12 @@ variable "service_plan_name" {
   default     = "financetracker-plan"
 }
 
+variable "github_repository" {
+  description = "Repo de GitHub (propietario/nombre) cuyo job deploy puede desplegar en la web app."
+  type        = string
+  default     = "antonicr1986/FinanceTracker"
+}
+
 variable "web_app_name" {
   type    = string
   default = "financetracker-api"

@@ -13,6 +13,12 @@ output "app_insights_connection_string" {
   sensitive = true
 }
 
+# Va a la variable AZURE_DEPLOY_CLIENT_ID de GitHub (no es secreto: sin el
+# token de GitHub del environment production no sirve para nada).
+output "deploy_client_id" {
+  value = azurerm_user_assigned_identity.deploy.client_id
+}
+
 output "key_vault_uri" {
   value = azurerm_key_vault.main.vault_uri
 }
