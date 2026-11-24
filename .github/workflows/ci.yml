@@ -441,6 +441,11 @@ jobs:
     concurrency:
       group: production
       cancel-in-progress: false
+    # id-token: write deja al job pedir a GitHub el token OIDC que Azure cambia
+    # por un acceso temporal (ver terraform/deploy-identity.tf).
+    permissions:
+      id-token: write
+      contents: read
     environment:
       name: production
       url: ${{ steps.deploy.outputs.webapp-url }}
@@ -452,12 +457,21 @@ jobs:
       # publicar en GHCR, identificada por el SHA del commit: no se vuelve a
       # compilar nada. Para volver a una version anterior basta con desplegar
       # otra vez su etiqueta sha-<commit>.
+      # Inicio de sesion sin contrasena (OIDC): GitHub demuestra que es este
+      # repo en el environment production y Azure da un acceso temporal que
+      # solo sirve para desplegar en la web app.
+      - name: Azure login (OIDC)
+        uses: azure/login@053f7285eb20bf5469ef084617b0b24d3cec53fc # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy image to Azure Web App
         id: deploy
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
           app-name: financetracker-api
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           images: ghcr.io/antonicr1986/financetracker:sha-${{ github.sha }}
 
       # Comprobacion tras el despliegue: desplegar no es lo mismo que funcionar.
