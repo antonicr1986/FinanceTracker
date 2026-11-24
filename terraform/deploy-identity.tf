@@ -21,11 +21,10 @@ resource "azurerm_user_assigned_identity" "deploy" {
 }
 
 resource "azurerm_federated_identity_credential" "deploy_production" {
-  name                = "github-production"
-  resource_group_name = azurerm_resource_group.main.name
-  parent_id           = azurerm_user_assigned_identity.deploy.id
-  audience            = ["api://AzureADTokenExchange"]
-  issuer              = "https://token.actions.githubusercontent.com"
+  name      = "github-production"
+  parent_id = azurerm_user_assigned_identity.deploy.id
+  audience  = ["api://AzureADTokenExchange"]
+  issuer    = "https://token.actions.githubusercontent.com"
   # Solo los jobs del environment production de este repo.
   subject = "repo:${var.github_repository}:environment:production"
 }

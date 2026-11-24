@@ -44,10 +44,10 @@ resource "azurerm_linux_web_app" "api" {
   service_plan_id     = azurerm_service_plan.api.id
   https_only          = true
 
-  # FTP con usuario/contrasena apagado. Web Deploy si, porque el job deploy
-  # del CI publica con el perfil de publicacion (AZURE_WEBAPP_PUBLISH_PROFILE).
+  # FTP y Web Deploy con usuario/contrasena apagados: el job deploy del CI
+  # entra con OIDC (ver deploy-identity.tf), sin ningun perfil de publicacion.
   ftp_publish_basic_authentication_enabled       = false
-  webdeploy_publish_basic_authentication_enabled = true
+  webdeploy_publish_basic_authentication_enabled = false
 
   site_config {
     always_on     = false # F1 no lo permite: la API se duerme a los 20 min
