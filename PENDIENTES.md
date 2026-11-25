@@ -60,8 +60,8 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
 - [x] **Escanear el chart con Trivy** (`trivy config charts/` en el CI) y endurecer el `securityContext`:
   API como `app` (UID 1654), sin root ni privilegios y con disco de solo lectura; excepción KSV-0014
   solo para SQL Server en `charts/.trivyignore.yaml` (25 nov 2026).
-- [ ] Añadir al chart: HPA (con metrics-server), `topologySpreadConstraints` entre nodos y un
-  PodDisruptionBudget para la API.
+- [x] Añadir al chart: HPA por CPU (2-4 réplicas), `topologySpreadConstraints` entre nodos y un
+  PodDisruptionBudget (`minAvailable: 1`) para la API (25 nov 2026).
 - [ ] **Sesión ACR + AKS** con el mismo chart: ACR Basic, AKS con 1 nodo (`--attach-acr`), valores de
   producción (`sql.enabled=false` con Azure SQL, imagen por `sha-...`) e Ingress con IP pública.
   **Crear, practicar y borrar el mismo día** (los nodos se pagan por horas).

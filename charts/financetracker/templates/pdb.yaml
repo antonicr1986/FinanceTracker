@@ -1,0 +1,13 @@
+# En mantenimientos del cluster (vaciar un nodo, actualizarlo...) Kubernetes
+# no puede dejar la API con menos de minAvailable replicas funcionando.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api
+  labels:
+    {{- include "financetracker.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.api.minAvailable }}
+  selector:
+    matchLabels:
+      app: api

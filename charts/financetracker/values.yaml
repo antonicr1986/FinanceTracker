@@ -9,7 +9,20 @@ api:
     # no "latest", para saber exactamente que version esta desplegada.
     tag: latest
     pullPolicy: IfNotPresent
+  # Replicas fijas. Si autoscaling.enabled es true, las decide el HPA entre
+  # minReplicas y maxReplicas y este valor no se usa.
   replicas: 2
+  # Escalado automatico por CPU (HorizontalPodAutoscaler). Necesita
+  # metrics-server en el cluster; sin el, el HPA no tiene datos y se queda en
+  # minReplicas.
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+  # PodDisruptionBudget: en un mantenimiento del cluster (vaciar un nodo,
+  # actualizar...) siempre queda al menos esta cantidad de API funcionando.
+  minAvailable: 1
   environment: Production
   resources:
     requests:

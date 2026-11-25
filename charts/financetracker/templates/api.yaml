@@ -14,7 +14,9 @@ metadata:
   labels:
     {{- include "financetracker.labels" . | nindent 4 }}
 spec:
+  {{- if not .Values.api.autoscaling.enabled }}
   replicas: {{ .Values.api.replicas }}
+  {{- end }}
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -40,6 +42,16 @@ spec:
         runAsGroup: 1654
         seccompProfile:
           type: RuntimeDefault
+      # Repartir las replicas entre nodos: si se cae uno, las demas siguen
+      # atendiendo. ScheduleAnyway: si no hay nodos suficientes (un cluster de
+      # un solo nodo), se despliegan igual en vez de quedarse sin arrancar.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: api
       {{- if .Values.sql.enabled }}
       # initContainer: corre ANTES que la API y solo termina cuando SQL esta
       # listo. Truco: el Service "sql" es headless, y su nombre DNS solo
