@@ -266,17 +266,15 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Aplica las migraciones pendientes al arrancar. Esto hace que la imagen sea
+// Aplica las migraciones pendientes y crea la cuenta de demostracion (datos de
+// ejemplo para entrar sin registrarse) al arrancar. Asi la imagen es
 // autosuficiente: contra un SQL Server vacio, la base de datos queda lista sola.
-// Con varias replicas habria que mover esto a un paso propio del pipeline.
+// Con varias replicas, un cerrojo en SQL Server hace que lo haga una sola cada
+// vez (ver DatabaseInitializer).
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-
-    // Cuenta de demostracion con datos de ejemplo, para que cualquiera pueda
-    // entrar a ver la aplicacion sin registrarse. No hace nada si ya existe.
-    await DemoDataSeeder.SeedAsync(db);
+    await DatabaseInitializer.MigrateAndSeedAsync(db);
 }
 
 // Lo primero, para que todo lo que viene detras (logs incluidos) vea la IP
