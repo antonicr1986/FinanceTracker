@@ -122,3 +122,30 @@ resource "azurerm_monitor_metric_alert" "http_403" {
 
   tags = local.tags
 }
+
+# --- Auditoria de SQL -------------------------------------------------------------
+#
+# Quien se conecta a la base de datos, que consultas fallan por permisos, cambios
+# de usuarios... (SQLSecurityAuditEvents) va al mismo Log Analytics, consultable
+# con KQL junto a la telemetria de la API. Sin Storage Account: no hay coste
+# extra mas alla de la ingesta, que ya limita daily_quota_gb.
+#
+# Azure lo pide asi: un diagnostic setting sobre la base de datos "master" del
+# servidor y la politica de auditoria con log_monitoring_enabled.
+
+resource "azurerm_monitor_diagnostic_setting" "sql_audit" {
+  name                       = "sql-audit-to-logs"
+  target_resource_id         = "${azurerm_mssql_server.main.id}/databases/master"
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
+
+  enabled_log {
+    category = "SQLSecurityAuditEvents"
+  }
+}
+
+resource "azurerm_mssql_server_extended_auditing_policy" "main" {
+  server_id              = azurerm_mssql_server.main.id
+  log_monitoring_enabled = true
+
+  depends_on = [azurerm_monitor_diagnostic_setting.sql_audit]
+}

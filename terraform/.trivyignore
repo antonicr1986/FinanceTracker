@@ -17,11 +17,6 @@ AZU-0003
 # de SQL. Revisar si se sube de plan.
 AZU-0022
 
-# AZU-0027: auditoria de SQL no configurada.
-# Necesita una Storage Account o Log Analytics (coste). Pendiente para
-# cuando se anada monitorizacion.
-AZU-0027
-
 # AZU-0013: Key Vault con acceso de red publico.
 # La web app (plan F1) no tiene integracion con VNet ni IP de salida fija, y
 # las referencias de Key Vault de App Service no pasan por la excepcion de
