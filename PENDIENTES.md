@@ -57,8 +57,9 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
   versión del chart de Traefik (`--version`) en las instrucciones.
 - [ ] **Mantener el chart al dia con la app**: si la API necesita una variable
   de entorno o un secreto nuevo, anadirlo tambien al chart (el lint del CI no lo detecta).
-- [ ] **Escanear el chart con Trivy** (`trivy config charts/`) y endurecer el
-  `securityContext` de los pods (no root, sistema de archivos de solo lectura).
+- [x] **Escanear el chart con Trivy** (`trivy config charts/` en el CI) y endurecer el `securityContext`:
+  API como `app` (UID 1654), sin root ni privilegios y con disco de solo lectura; excepción KSV-0014
+  solo para SQL Server en `charts/.trivyignore.yaml` (25 nov 2026).
 - [ ] Añadir al chart: HPA (con metrics-server), `topologySpreadConstraints` entre nodos y un
   PodDisruptionBudget para la API.
 - [ ] **Sesión ACR + AKS** con el mismo chart: ACR Basic, AKS con 1 nodo (`--attach-acr`), valores de

@@ -95,6 +95,18 @@ jobs:
             --exit-code 1 \
             .
 
+      # El mismo escaneo sobre el chart de Helm (charts/): que los pods no
+      # corran como root, sin escalar privilegios, con el disco de solo
+      # lectura... Las excepciones conscientes, en charts/.trivyignore.yaml.
+      - name: Helm chart security scan
+        working-directory: charts
+        run: |
+          trivy config \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --ignorefile .trivyignore.yaml \
+            .
+
   # Tests de Pester de los scripts de AWS (up.ps1 y sus funciones). Corre en
   # Windows con Windows PowerShell 5.1, la misma version con la que se
   # ejecutan los scripts, para detectar lo que solo falla en 5.1.

@@ -31,6 +31,15 @@ spec:
         # Si cambia el ConfigMap, cambia este hash y los pods se recrean solos.
         checksum/config: {{ .Values.api.environment | sha256sum }}
     spec:
+      # Todo el pod como usuario sin privilegios: "app" (UID 1654), el que trae
+      # la imagen de ASP.NET. Ni root ni escalar privilegios, y el perfil
+      # seccomp por defecto del runtime (limita las llamadas al sistema).
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1654
+        runAsGroup: 1654
+        seccompProfile:
+          type: RuntimeDefault
       {{- if .Values.sql.enabled }}
       # initContainer: corre ANTES que la API y solo termina cuando SQL esta
       # listo. Truco: el Service "sql" es headless, y su nombre DNS solo
@@ -46,6 +55,8 @@ spec:
               echo "Esperando a que SQL Server este listo..."
               until nslookup sql.{{ .Release.Namespace }}.svc.cluster.local > /dev/null 2>&1; do sleep 2; done
               echo "SQL Server listo."
+          securityContext:
+            {{- include "financetracker.containerSecurityContext" . | nindent 12 }}
           resources:
             requests:
               cpu: 10m
@@ -59,6 +70,17 @@ spec:
           imagePullPolicy: {{ .Values.api.image.pullPolicy }}
           ports:
             - containerPort: 8080
+          securityContext:
+            {{- include "financetracker.containerSecurityContext" . | nindent 12 }}
+          # El disco del contenedor es de solo lectura: .NET solo escribe en
+          # /tmp y en las claves de ASP.NET (DataProtection, en el HOME de
+          # "app"). Las dos son temporales: se pierden al recrear el pod, igual
+          # que ya pasaba antes dentro del contenedor.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: aspnet-keys
+              mountPath: /home/app/.aspnet
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
           startupProbe:
@@ -98,6 +120,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.secrets.api }}
                   key: Mfa__EncryptionKey
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: aspnet-keys
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

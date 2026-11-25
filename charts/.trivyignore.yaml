@@ -1,0 +1,10 @@
+# Excepciones conscientes del escaneo del chart (trivy config charts/).
+# Cada una con su motivo. El resto de hallazgos HIGH o CRITICAL rompen el CI.
+misconfigurations:
+  # SQL Server necesita escribir fuera de su volumen de datos al arrancar, asi
+  # que su contenedor no puede tener el disco de solo lectura. Es la base de
+  # datos de pruebas del cluster local: en Azure se usa Azure SQL
+  # (sql.enabled=false) y este contenedor no se despliega.
+  - id: KSV-0014
+    paths:
+      - "financetracker/templates/sql.yaml"

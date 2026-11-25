@@ -30,13 +30,28 @@ spec:
       labels:
         app: sql
     spec:
+      # La imagen de SQL Server corre como el usuario "mssql" (UID 10001), no
+      # como root. Se fija aqui para que el cluster lo exija.
       securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
         fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: mssql
           image: {{ .Values.sql.image }}
           ports:
             - containerPort: 1433
+          # Sin escalar privilegios ni capacidades de Linux. El disco NO es de
+          # solo lectura: SQL Server escribe fuera de /var/opt/mssql al arrancar
+          # (ver la excepcion KSV-0014 en charts/.trivyignore.yaml).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: ACCEPT_EULA
               value: "Y"
