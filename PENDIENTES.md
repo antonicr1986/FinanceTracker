@@ -94,7 +94,7 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
   latencia y datos en un solo sitio. Valorar si el plan gratuito lo permite.
 - [ ] **SQL sin contraseña**: autenticación Microsoft Entra con la managed identity.
 - [x] Monitorización: Application Insights (OpenTelemetry) y alertas por email de 5xx y picos de 401/403 (`terraform/monitoring.tf`).
-- [ ] Enviar la auditoría de SQL al mismo Log Analytics y quitar AZU-0027 de `.trivyignore`.
+- [x] Auditoría de SQL al mismo Log Analytics (`SQLSecurityAuditEvents`) y AZU-0027 fuera de `.trivyignore` (25 nov 2026).
 - [ ] Revisar las exclusiones de `terraform/.trivyignore` si se sube de plan (AZU-0022, AZU-0027).
 
 ## Otros repositorios
