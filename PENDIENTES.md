@@ -25,11 +25,10 @@ devuelven 404. No vio ningún endpoint real.
 
 ## Pipeline (`ci.yml`)
 
-- [ ] **OIDC en el job `deploy`**: sustituir `AZURE_WEBAPP_PUBLISH_PROFILE` por
-  `azure/login` con una identidad propia (rol *Website Contributor* limitado a la
-  Web App, federated credential restringida al environment `production`).
-  Después: borrar el secret, poner `webdeploy_publish_basic_authentication_enabled = false`
-  en `main.tf` y `terraform apply`.
+- [x] **OIDC en el job `deploy`**: `azure/login` con la identidad `id-financetracker-deploy`
+  (rol *Website Contributor* solo sobre la Web App, federated credential restringida al
+  environment `production`, en `terraform/deploy-identity.tf`). Borrado el secret
+  `AZURE_WEBAPP_PUBLISH_PROFILE` y Web Deploy con contraseña apagado. Hecho (25 nov 2026).
 - [ ] **Required reviewers** en el environment `production` (Settings → Environments).
 - [x] **SAST con CodeQL** (Settings → Code security → CodeQL, Default setup).
 - [ ] **Cadena de suministro**:
