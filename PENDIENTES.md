@@ -34,7 +34,7 @@ devuelven 404. No vio ningún endpoint real.
   despliegue que no pase los controles. Revisar si alguien más tiene permiso de push.
 - [x] **SAST con CodeQL** (Settings → Code security → CodeQL, Default setup).
 - [ ] **Cadena de suministro**:
-  - [ ] Publicar exactamente la imagen escaneada (o desplegar por digest `@sha256:`).
+  - [x] Desplegar por digest (`@sha256:`) exactamente la imagen escaneada y firmada (25 nov 2026).
   - [ ] Generar SBOM (`trivy image --format cyclonedx`).
   - [ ] Firmar la imagen / procedencia (`actions/attest-build-provenance` o cosign).
   - [x] Verificar el checksum de gitleaks (`GITLEAKS_SHA256` + `sha256sum --check` en `ci.yml`).
