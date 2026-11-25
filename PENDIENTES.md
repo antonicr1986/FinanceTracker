@@ -93,7 +93,11 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
   vuelva a adoptar. El plan debe decir `1 to import, 0 to destroy`; si dice `destroy`, parar.
 - [ ] **Misma región para la API y la base de datos** (ahora Belgium Central y Sweden Central): menos
   latencia y datos en un solo sitio. Valorar si el plan gratuito lo permite.
-- [ ] **SQL sin contraseña**: autenticación Microsoft Entra con la managed identity.
+- [x] **SQL sin contraseña**: la API entra con su managed identity (`Authentication=Active Directory
+  Managed Identity`, usuario `financetracker-api` con db_datareader/db_datawriter/db_ddladmin). Administrador
+  de Entra ID en el servidor con Terraform; el login SQL queda como acceso de emergencia (25 nov 2026).
+- [ ] Desactivar la versión antigua del secreto `ConnectionStrings--DefaultConnection` (con contraseña) en Key
+  Vault cuando la nueva lleve unos días sin problemas.
 - [x] Monitorización: Application Insights (OpenTelemetry) y alertas por email de 5xx y picos de 401/403 (`terraform/monitoring.tf`).
 - [x] Auditoría de SQL al mismo Log Analytics (`SQLSecurityAuditEvents`) y AZU-0027 fuera de `.trivyignore` (25 nov 2026).
 - [ ] Revisar las exclusiones de `terraform/.trivyignore` si se sube de plan (AZU-0022, AZU-0027).

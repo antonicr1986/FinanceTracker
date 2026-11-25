@@ -101,6 +101,16 @@ resource "azurerm_mssql_server" "main" {
   administrator_login_password_wo         = var.sql_admin_password
   administrator_login_password_wo_version = var.sql_admin_password_version
 
+  # Administrador de Microsoft Entra ID: el que crea en la base de datos el
+  # usuario de la identidad administrada de la API, que entra sin contrasena.
+  # El administrador SQL de arriba se mantiene como acceso de emergencia
+  # (azuread_authentication_only = false).
+  azuread_administrator {
+    login_username              = var.sql_entra_admin_login
+    object_id                   = var.sql_entra_admin_object_id
+    azuread_authentication_only = false
+  }
+
   tags = local.tags
 
   lifecycle {

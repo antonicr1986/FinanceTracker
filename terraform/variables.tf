@@ -82,6 +82,20 @@ variable "sql_admin_password" {
 
 # 0 = no tocar la contrasena (asi el import no la reenvia). Para rotarla:
 # nueva contrasena en TF_VAR_sql_admin_password y subir este valor en 1.
+# Administrador de Entra ID del servidor SQL. No son secretos: un nombre y un
+# identificador de usuario, inutiles sin iniciar sesion como el.
+variable "sql_entra_admin_login" {
+  description = "Usuario de Entra ID administrador del servidor SQL."
+  type        = string
+  default     = "antonicr1986@hotmail.com"
+}
+
+variable "sql_entra_admin_object_id" {
+  description = "Object ID en Entra ID de ese usuario."
+  type        = string
+  default     = "2ef9ea81-a0ac-4bb6-ae1c-5be3342dc7a9"
+}
+
 variable "sql_admin_password_version" {
   description = "Version de la contrasena del administrador SQL."
   type        = number
