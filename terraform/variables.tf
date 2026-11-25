@@ -56,7 +56,7 @@ variable "sql_location" {
 
 variable "sql_database_name" {
   type    = string
-  default = "acrfinancetracker"
+  default = "sqldb-financetracker"
 }
 
 variable "container_image" {

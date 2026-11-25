@@ -87,10 +87,8 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
   es una referencia a Key Vault (`appinsights-connection-string`). Las `DOCKER_REGISTRY_SERVER_*`
   estaban vacías y se han borrado: la imagen de GHCR es pública. Hecho (25 nov 2026).
 - [x] **Presupuesto con alerta** en Azure Cost Management (creado en el portal; ya ha avisado por email).
-- [ ] **Renombrar la base de datos** `acrfinancetracker` (el prefijo `acr` parece un Container
-  Registry): `az sql db rename`, actualizar la cadena de conexión (en Key Vault), cambiar
-  `sql_database_name` y `terraform state rm azurerm_mssql_database.main` para que `imports.tf` la
-  vuelva a adoptar. El plan debe decir `1 to import, 0 to destroy`; si dice `destroy`, parar.
+- [x] **Renombrar la base de datos** `acrfinancetracker` → `sqldb-financetracker` (`az sql db rename`,
+  cadena de conexión en Key Vault y `terraform state rm` + import). Datos y usuario de la identidad intactos (25 nov 2026).
 - [ ] **Misma región para la API y la base de datos** (ahora Belgium Central y Sweden Central): menos
   latencia y datos en un solo sitio. Valorar si el plan gratuito lo permite.
 - [x] **SQL sin contraseña**: la API entra con su managed identity (`Authentication=Active Directory
