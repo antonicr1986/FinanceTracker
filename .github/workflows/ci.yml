@@ -311,6 +311,10 @@ jobs:
       contents: read
       packages: write
       id-token: write   # cosign keyless: token OIDC de GitHub para firmar
+    # La imagen recien publicada, por digest (huella inmutable): el job deploy
+    # despliega exactamente esta, la que se ha escaneado y firmado aqui.
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -453,10 +457,6 @@ jobs:
     outputs:
       webapp-url: ${{ steps.deploy.outputs.webapp-url }}
     steps:
-      # Azure ejecuta la MISMA imagen que se acaba de escanear con Trivy y
-      # publicar en GHCR, identificada por el SHA del commit: no se vuelve a
-      # compilar nada. Para volver a una version anterior basta con desplegar
-      # otra vez su etiqueta sha-<commit>.
       # Inicio de sesion sin contrasena (OIDC): GitHub demuestra que es este
       # repo en el environment production y Azure da un acceso temporal que
       # solo sirve para desplegar en la web app.
@@ -467,12 +467,17 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # Azure ejecuta la MISMA imagen que se acaba de escanear con Trivy,
+      # firmar y publicar en GHCR, identificada por su digest (@sha256:...),
+      # que no se puede sobrescribir como una etiqueta: no se vuelve a compilar
+      # nada. Para volver a una version anterior basta con desplegar otra vez
+      # su etiqueta sha-<commit> (o su digest).
       - name: Deploy image to Azure Web App
         id: deploy
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383 # v3.0.8
         with:
           app-name: financetracker-api
-          images: ghcr.io/antonicr1986/financetracker:sha-${{ github.sha }}
+          images: ${{ needs.docker.outputs.image }}
 
       # Comprobacion tras el despliegue: desplegar no es lo mismo que funcionar.
       # Se llama a /health/ready, que solo responde 200 si la API ha arrancado
