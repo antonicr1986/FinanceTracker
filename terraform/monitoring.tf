@@ -4,7 +4,8 @@
 # La API envia peticiones, dependencias, excepciones y logs con OpenTelemetry
 # (Azure.Monitor.OpenTelemetry.AspNetCore). La connection string de Application
 # Insights llega a la Web App como app setting APPLICATIONINSIGHTS_CONNECTION_STRING,
-# que se pone con az: Terraform ignora los app_settings (ver main.tf).
+# una referencia a Key Vault (secreto appinsights-connection-string). Se pone a mano:
+# Terraform ignora los app_settings (ver main.tf).
 
 resource "azurerm_log_analytics_workspace" "main" {
   name                = var.log_analytics_name

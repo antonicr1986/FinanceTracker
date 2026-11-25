@@ -29,7 +29,9 @@ devuelven 404. No vio ningún endpoint real.
   (rol *Website Contributor* solo sobre la Web App, federated credential restringida al
   environment `production`, en `terraform/deploy-identity.tf`). Borrado el secret
   `AZURE_WEBAPP_PUBLISH_PROFILE` y Web Deploy con contraseña apagado. Hecho (25 nov 2026).
-- [ ] **Required reviewers** en el environment `production` (Settings → Environments).
+- [~] ~~**Required reviewers** en el environment `production`~~. Descartado (25 nov 2026): con un solo
+  desarrollador, quien hace push y quien aprueba es la misma persona; el CI ya bloquea cualquier
+  despliegue que no pase los controles. Revisar si alguien más tiene permiso de push.
 - [x] **SAST con CodeQL** (Settings → Code security → CodeQL, Default setup).
 - [ ] **Cadena de suministro**:
   - [ ] Publicar exactamente la imagen escaneada (o desplegar por digest `@sha256:`).
@@ -78,13 +80,12 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
   `kv-financetracker` con RBAC, soft delete y purge protection (`terraform/keyvault.tf`), rol
   *Key Vault Secrets User* para la managed identity de la Web App y app settings con
   `@Microsoft.KeyVault(...)`. Los valores se cargaron con la CLI, fuera del estado.
-- [ ] **Quitar la cadena de conexión duplicada**: la connection string `DefaultConnection` (tipo
-  SQLAzure, pestaña *Cadenas de conexión*) sigue teniendo la contraseña en claro, aunque la app
-  setting ya lee de Key Vault. Comprobar que la API funciona solo con la app setting y borrarla
-  (o convertirla también en referencia de Key Vault).
-- [ ] **Mover a Key Vault el resto de secretos** de la Web App: `DOCKER_REGISTRY_SERVER_PASSWORD`
-  (token de GHCR) y `APPLICATIONINSIGHTS_CONNECTION_STRING`, con el mismo procedimiento.
-- [ ] **Presupuesto con alerta** en Azure Cost Management, antes de crear nada de pago (ACR, AKS).
+- [x] **Quitar la cadena de conexión duplicada**: borrada la connection string `DefaultConnection`
+  (tenía la contraseña en claro); la API usa solo la app setting que lee de Key Vault. Hecho (25 nov 2026).
+- [x] **Mover a Key Vault el resto de secretos** de la Web App: `APPLICATIONINSIGHTS_CONNECTION_STRING`
+  es una referencia a Key Vault (`appinsights-connection-string`). Las `DOCKER_REGISTRY_SERVER_*`
+  estaban vacías y se han borrado: la imagen de GHCR es pública. Hecho (25 nov 2026).
+- [x] **Presupuesto con alerta** en Azure Cost Management (creado en el portal; ya ha avisado por email).
 - [ ] **Renombrar la base de datos** `acrfinancetracker` (el prefijo `acr` parece un Container
   Registry): `az sql db rename`, actualizar la cadena de conexión (en Key Vault), cambiar
   `sql_database_name` y `terraform state rm azurerm_mssql_database.main` para que `imports.tf` la
