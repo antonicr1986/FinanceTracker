@@ -361,7 +361,7 @@ Requisitos: un cluster (`kubectl get nodes` → Ready), Helm y un Ingress contro
 
 ```bash
 helm repo add traefik https://traefik.github.io/charts
-helm install traefik traefik/traefik -n traefik --create-namespace
+helm install traefik traefik/traefik -n traefik --create-namespace --version 42.4.3
 ```
 
 Crear el namespace y los Secrets (nunca se suben a Git):

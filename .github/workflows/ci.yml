@@ -512,6 +512,50 @@ jobs:
           echo "::error::La API no responde correctamente en $APP_URL/health/ready"
           exit 1
 
+  # GitOps: el chart de Helm dice siempre que imagen desplegar. Tras un deploy
+  # correcto, fija en values.yaml la etiqueta de la imagen que esta en
+  # produccion (sha-<commit>) en vez de "latest": Argo CD (o un helm upgrade)
+  # despliega asi una version concreta, trazable a un commit.
+  # El commit lo hace GITHUB_TOKEN, que no lanza workflows nuevos: sin bucles.
+  chart-image-tag:
+    needs: deploy
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    # Uno detras de otro, para que dos pushes seguidos no choquen al escribir.
+    concurrency:
+      group: chart-image-tag
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Pin the image tag in the chart
+        env:
+          TAG: sha-${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          file=charts/financetracker/values.yaml
+          sed -i -E "s/^(    tag: ).*/\1${TAG}/" "$file"
+          grep -n "^    tag: ${TAG}$" "$file"
+          if git diff --quiet; then
+            echo "El chart ya apunta a ${TAG}"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(helm): deploy image ${TAG} [skip ci]"
+          # Si entretanto ha llegado otro commit, se pone encima y se reintenta.
+          for intento in 1 2 3; do
+            git pull --rebase origin "$BRANCH" && git push origin "HEAD:$BRANCH" && exit 0
+            sleep 5
+          done
+          echo "::error::Could not push the image tag to the chart"
+          exit 1
+
   # DAST pasivo de produccion: revisa la API ya desplegada desde fuera,
   # con OWASP ZAP en modo baseline (no destructivo): cabeceras de
   # seguridad que faltan, cookies inseguras, informacion expuesta en errores...

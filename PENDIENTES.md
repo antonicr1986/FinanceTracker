@@ -51,10 +51,8 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
   Application que apunte a `charts/financetracker` en `master`, con *sync*
   automatico y *self-heal*. Probar: cambiar `api.replicas` en Git, escalar a mano
   con `kubectl` (drift corregido) y `git revert` como rollback.
-- [ ] **Imagen fijada por commit**: que el CI actualice `api.image.tag` en
-  `values.yaml` con el `sha-...` de la imagen publicada, en vez de usar `latest`
-  (necesario para que Argo CD despliegue versiones concretas). Fijar también la
-  versión del chart de Traefik (`--version`) en las instrucciones.
+- [x] **Imagen fijada por commit**: el job `chart-image-tag` del CI fija `api.image.tag` en `values.yaml` con el
+  `sha-...` de la imagen desplegada tras cada deploy correcto; Traefik con `--version` en las instrucciones (25 nov 2026).
 - [ ] **Mantener el chart al dia con la app**: si la API necesita una variable
   de entorno o un secreto nuevo, anadirlo tambien al chart (el lint del CI no lo detecta).
 - [x] **Escanear el chart con Trivy** (`trivy config charts/` en el CI) y endurecer el `securityContext`:

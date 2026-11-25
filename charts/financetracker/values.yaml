@@ -5,8 +5,9 @@
 api:
   image:
     repository: ghcr.io/antonicr1986/financetracker
-    # Etiqueta de la imagen. En produccion conviene fijar un commit (sha-...),
-    # no "latest", para saber exactamente que version esta desplegada.
+    # Etiqueta de la imagen: la del commit que esta en produccion (sha-...),
+    # nunca "latest". La actualiza el CI (job chart-image-tag) tras cada
+    # despliegue correcto, asi Git dice siempre que version desplegar.
     tag: latest
     pullPolicy: IfNotPresent
   # Replicas fijas. Si autoscaling.enabled es true, las decide el HPA entre

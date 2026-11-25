@@ -370,7 +370,7 @@ Prerequisites: a cluster (`kubectl get nodes` → Ready), Helm and an Ingress co
 
 ```bash
 helm repo add traefik https://traefik.github.io/charts
-helm install traefik traefik/traefik -n traefik --create-namespace
+helm install traefik traefik/traefik -n traefik --create-namespace --version 42.4.3
 ```
 
 Create the namespace and the Secrets (never committed):
