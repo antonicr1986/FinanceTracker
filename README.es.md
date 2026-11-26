@@ -335,7 +335,7 @@ IMAGE_TAG=sha-<commit-sha> docker compose -f docker-compose.prod.yml up -d
 
 ## ☸️ Kubernetes (Helm)
 
-La misma imagen que el pipeline publica en GHCR puede desplegarse en cualquier cluster de Kubernetes, empaquetada como chart de Helm en [`charts/financetracker`](charts/financetracker). El pipeline lo valida en cada pull request (`helm lint --strict` y `helm template`, con la base de datos incluida y con una externa). Todavia no esta desplegado en un cluster: la produccion sigue en Azure App Service.
+La misma imagen que el pipeline publica en GHCR puede desplegarse en cualquier cluster de Kubernetes, empaquetada como chart de Helm en [`charts/financetracker`](charts/financetracker). El pipeline lo valida en cada pull request (`helm lint --strict` y `helm template`, con la base de datos incluida y con una externa). Argo CD lo mantiene desplegado en un cluster local (GitOps); la produccion sigue en Azure App Service.
 
 ```mermaid
 flowchart LR
@@ -347,7 +347,7 @@ flowchart LR
     A2 --> DB
 ```
 
-- **API como Deployment** con 2 replicas y actualizaciones sin corte (`maxUnavailable: 0`).
+- **API como Deployment** con actualizaciones sin corte (`maxUnavailable: 0`), autoescalada por CPU entre 2 y 4 replicas (HPA) y protegida con un PodDisruptionBudget.
 - **Tres sondas**: startup (da margen a las migraciones), liveness en `/health` (reinicia un proceso colgado) y readiness en `/health/ready` (saca un pod del trafico si no llega a la base de datos, sin reiniciarlo).
 - **Un initContainer** espera a SQL Server antes de arrancar la API, para que nunca intente migrar contra una base de datos que no esta lista.
 - **SQL Server como StatefulSet** con volumen persistente, pensado para que los datos sobrevivan a borrar el pod e incluso a redesplegarlo desde cero.
@@ -389,6 +389,27 @@ Cualquier valor se cambia sin tocar las plantillas, y cada cambio se puede rever
 ```bash
 helm upgrade financetracker charts/financetracker -n financetracker --set api.replicas=3
 helm rollback financetracker 1 -n financetracker
+```
+
+### 🔄 GitOps con Argo CD
+
+En lugar de lanzar `helm upgrade` a mano, [Argo CD](argocd/financetracker-app.yaml) vigila `charts/financetracker` en `master` y aplica cada cambio al cluster: Git es la unica fuente de verdad. Tras cada deploy, el CI fija la etiqueta de la imagen nueva en `values.yaml`, asi que las versiones nuevas llegan solas al cluster.
+
+- **Sync automatico**: un commit se despliega en ~3 minutos, sin `kubectl` ni `helm`.
+- **Self-heal**: un cambio manual en el cluster (por ejemplo, borrar el PDB) se deshace.
+- **Rollback con `git revert`**: deshacer el commit deshace el despliegue.
+
+Instalar Argo CD y metrics-server (lo necesita el HPA; en Docker Desktop requiere `--kubelet-insecure-tls`), crear los Secrets como arriba y aplicar la Application:
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd --server-side --force-conflicts \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/v3.6.3/manifests/install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.9.1/components.yaml
+kubectl patch deployment metrics-server -n kube-system --type=json \
+  -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+kubectl apply -f argocd/financetracker-app.yaml
+kubectl get application financetracker -n argocd   # Synced / Healthy
 ```
 
 ## ⚙️ CI/CD

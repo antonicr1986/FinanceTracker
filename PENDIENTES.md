@@ -47,10 +47,9 @@ Contexto: la API ya se despliega en Kubernetes con el chart `charts/financetrack
 (PR #8), validado en el CI con `helm lint --strict` y `helm template`. Hoy el
 despliegue en el cluster es manual (`helm install` / `helm upgrade`).
 
-- [ ] **GitOps con Argo CD**: instalar Argo CD en el cluster local y crear una
-  Application que apunte a `charts/financetracker` en `master`, con *sync*
-  automatico y *self-heal*. Probar: cambiar `api.replicas` en Git, escalar a mano
-  con `kubectl` (drift corregido) y `git revert` como rollback.
+- [x] **GitOps con Argo CD**: Application `argocd/financetracker-app.yaml` sobre `charts/financetracker`
+  en `master`, con sync automatico, prune y self-heal (+ metrics-server para el HPA). Probado: PDB borrado a mano
+  se recrea, `maxReplicas` 4→5 en Git llega solo al HPA y el revert lo devuelve a 4 (26 nov 2026).
 - [x] **Imagen fijada por commit**: el job `chart-image-tag` del CI fija `api.image.tag` en `values.yaml` con el
   `sha-...` de la imagen desplegada tras cada deploy correcto; Traefik con `--version` en las instrucciones (25 nov 2026).
 - [ ] **Mantener el chart al dia con la app**: si la API necesita una variable

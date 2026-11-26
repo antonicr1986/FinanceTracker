@@ -1,0 +1,37 @@
+# Application de Argo CD: el cluster despliega lo que dice Git.
+#
+# - Fuente: el chart charts/financetracker de la rama master. La etiqueta de
+#   la imagen la fija el CI (job chart-image-tag) tras cada deploy, asi que
+#   cada version nueva llega aqui sola.
+# - automated: sincroniza sin que nadie pulse nada (Argo CD mira Git cada ~3 min).
+# - selfHeal: si alguien cambia algo a mano en el cluster, lo deshace.
+# - prune: si algo desaparece del chart, lo borra tambien del cluster.
+#
+# Los Secrets (sql-secret, api-secret) NO estan en Git: se crean a mano en el
+# namespace antes de aplicar esto (ver el README).
+#
+# Instalar: kubectl apply -f argocd/financetracker-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: financetracker
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/antonicr1986/FinanceTracker.git
+    targetRevision: master
+    path: charts/financetracker
+    helm:
+      valuesObject:
+        # El cluster local no tiene controlador de Ingress: se entra con
+        # kubectl port-forward. Con Traefik instalado, quitar esta linea.
+        ingress:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: financetracker
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
