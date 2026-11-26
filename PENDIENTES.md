@@ -86,8 +86,10 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
 - [x] **Presupuesto con alerta** en Azure Cost Management (creado en el portal; ya ha avisado por email).
 - [x] **Renombrar la base de datos** `acrfinancetracker` → `sqldb-financetracker` (`az sql db rename`,
   cadena de conexión en Key Vault y `terraform state rm` + import). Datos y usuario de la identidad intactos (25 nov 2026).
-- [ ] **Misma región para la API y la base de datos** (ahora Belgium Central y Sweden Central): menos
-  latencia y datos en un solo sitio. Valorar si el plan gratuito lo permite.
+- [x] **Misma región para la API y la base de datos**: descartado, se quedan en Belgium Central y Sweden Central.
+  La oferta gratuita de Azure SQL exige que todas las BD gratuitas estén en la misma región (la actual, en Suecia);
+  moverla obliga a borrarla o pagarla. Revisar si se sale de la oferta gratuita o la latencia se nota.
+  Documentado en `terraform/variables.tf` (26 nov 2026).
 - [x] **SQL sin contraseña**: la API entra con su managed identity (`Authentication=Active Directory
   Managed Identity`, usuario `financetracker-api` con db_datareader/db_datawriter/db_ddladmin). Administrador
   de Entra ID en el servidor con Terraform; el login SQL queda como acceso de emergencia (25 nov 2026).

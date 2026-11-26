@@ -48,6 +48,12 @@ variable "sql_server_resource_group_name" {
   default     = "financetracker-rg"
 }
 
+# SQL se queda en Sweden Central aunque la API este en Belgium Central (#36):
+# la oferta gratuita de Azure SQL exige que todas las BD gratuitas de la
+# suscripcion esten en la misma region, y la actual ya esta en Suecia. Moverla
+# obligaria a borrarla y recrearla (o a pagarla); mover la API cambiaria su URL
+# en los tres clientes. ~25 ms mas por consulta no lo justifican.
+# Revisarlo si se sale de la oferta gratuita o la latencia empieza a notarse.
 variable "sql_location" {
   description = "Region del servidor SQL. No es la misma que la de la API."
   type        = string
