@@ -19,7 +19,7 @@ api:
   autoscaling:
     enabled: true
     minReplicas: 2
-    maxReplicas: 5
+    maxReplicas: 4
     targetCPUUtilizationPercentage: 70
   # PodDisruptionBudget: en un mantenimiento del cluster (vaciar un nodo,
   # actualizar...) siempre queda al menos esta cantidad de API funcionando.
