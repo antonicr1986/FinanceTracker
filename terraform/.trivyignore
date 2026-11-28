@@ -13,8 +13,10 @@ AZU-0003
 
 # AZU-0022: SQL Server con acceso de red publico.
 # El plan F1 de App Service no permite integracion con VNet y un private
-# endpoint tiene coste. El acceso queda limitado por las reglas de firewall
-# de SQL. Revisar si se sube de plan.
+# endpoint tiene coste. El acceso queda limitado por la unica regla de
+# firewall ("servicios de Azure", en main.tf) y, sobre todo, por la
+# autenticacion: solo Entra ID, sin usuario y contrasena. Revisar si se sube
+# de plan.
 AZU-0022
 
 # AZU-0013: Key Vault con acceso de red publico.

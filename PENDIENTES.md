@@ -93,6 +93,8 @@ despliegue en el cluster es manual (`helm install` / `helm upgrade`).
 - [x] **SQL sin contraseña**: la API entra con su managed identity (`Authentication=Active Directory
   Managed Identity`, usuario `financetracker-api` con db_datareader/db_datawriter/db_ddladmin). Administrador
   de Entra ID en el servidor con Terraform; el login SQL queda como acceso de emergencia (25 nov 2026).
+- [x] **SQL solo con Entra ID** (`azuread_authentication_only = true`): ningún login con contraseña, ni el de
+  emergencia. Firewall revisado: solo "servicios de Azure", ahora en Terraform (28 nov 2026, #42).
 - [x] Deshabilitadas las versiones antiguas del secreto `ConnectionStrings--DefaultConnection` (con contraseña) en
   Key Vault; la Web App usa siempre la última, sin `SecretVersion` (26 nov 2026).
 - [x] Monitorización: Application Insights (OpenTelemetry) y alertas por email de 5xx y picos de 401/403 (`terraform/monitoring.tf`).

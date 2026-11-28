@@ -32,3 +32,8 @@ import {
   to = azurerm_mssql_database.main
   id = "${local.sql_rg}/providers/Microsoft.Sql/servers/${var.sql_server_name}/databases/${var.sql_database_name}"
 }
+
+import {
+  to = azurerm_mssql_firewall_rule.azure_services
+  id = "${local.sql_rg}/providers/Microsoft.Sql/servers/${var.sql_server_name}/firewallRules/AllowAllWindowsAzureIps"
+}

@@ -103,12 +103,14 @@ resource "azurerm_mssql_server" "main" {
 
   # Administrador de Microsoft Entra ID: el que crea en la base de datos el
   # usuario de la identidad administrada de la API, que entra sin contrasena.
-  # El administrador SQL de arriba se mantiene como acceso de emergencia
-  # (azuread_authentication_only = false).
+  # Solo Entra ID (azuread_authentication_only = true): Azure rechaza cualquier
+  # login con usuario y contrasena, tambien el del administrador SQL de arriba,
+  # que el proveedor sigue exigiendo pero ya no sirve para entrar. El acceso de
+  # emergencia es el administrador de Entra ID (con MFA), no una contrasena.
   azuread_administrator {
     login_username              = var.sql_entra_admin_login
     object_id                   = var.sql_entra_admin_object_id
-    azuread_authentication_only = false
+    azuread_authentication_only = true
   }
 
   tags = local.tags
@@ -116,6 +118,19 @@ resource "azurerm_mssql_server" "main" {
   lifecycle {
     prevent_destroy = true
   }
+}
+
+# Unica regla de firewall de SQL: "permitir servicios de Azure" (0.0.0.0).
+# La necesita la Web App, que en el plan F1 no tiene IP de salida fija ni VNet.
+# Abre la red a servicios de cualquier cliente de Azure, pero ya no hay
+# contrasena que probar: solo entra quien tenga identidad de Entra ID con
+# permisos en la base de datos. Revisado el 28 nov 2026 (issue #42): ninguna
+# otra regla. Si se sube de plan, sustituirla por VNet + private endpoint.
+resource "azurerm_mssql_firewall_rule" "azure_services" {
+  name             = "AllowAllWindowsAzureIps"
+  server_id        = azurerm_mssql_server.main.id
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
 }
 
 resource "azurerm_mssql_database" "main" {
