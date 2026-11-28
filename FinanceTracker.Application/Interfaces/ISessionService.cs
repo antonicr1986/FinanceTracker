@@ -15,6 +15,9 @@ public interface ISessionService
     /// </summary>
     Task<bool> IsActiveAsync(int userId, DateTime issuedAt);
 
-    /// <summary>Invalida todos los JWT emitidos hasta ahora para el usuario.</summary>
-    Task RevokeAllAsync(int userId);
+    /// <summary>
+    /// Invalida todos los JWT emitidos hasta ahora para el usuario. false si
+    /// no se puede (la cuenta demo, compartida por todos los visitantes).
+    /// </summary>
+    Task<bool> RevokeAllAsync(int userId);
 }

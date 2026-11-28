@@ -74,6 +74,20 @@ public class SessionServiceTests
     }
 
     [Fact]
+    public async Task RevokeAllAsync_ShouldNotRevokeTheDemoAccount()
+    {
+        // Compartida: cerrar sus sesiones echaria a todos los visitantes.
+        using var context = CreateDbContext();
+        await DemoDataSeeder.SeedAsync(context);
+        var demo = await context.Users.SingleAsync(user => user.Email == DemoDataSeeder.DemoEmail);
+
+        var revoked = await new SessionService(context).RevokeAllAsync(demo.Id);
+
+        Assert.False(revoked);
+        Assert.Null(demo.SessionsRevokedAt);
+    }
+
+    [Fact]
     public async Task RevokeAllAsync_ShouldOnlyAffectThatUser()
     {
         using var context = CreateDbContext();

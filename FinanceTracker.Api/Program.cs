@@ -96,6 +96,9 @@ builder.Services.AddSingleton(MfaSecretProtector.FromBase64(builder.Configuratio
 builder.Services.AddScoped<IMfaService, MfaService>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 
+// Reinicio nocturno de la cuenta demo (ver DemoResetService).
+builder.Services.AddHostedService<DemoResetService>();
+
 // Correo: con Email:Endpoint, Azure Communication Services autenticado con la
 // identidad administrada (DefaultAzureCredential); sin el, el codigo de
 // verificacion va al log (y solo en desarrollo se escribe el codigo).

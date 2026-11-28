@@ -316,6 +316,14 @@ public class UserService : IUserService
     // Contraseña incorrecta: cuenta para el bloqueo de la cuenta.
     private async Task RegisterFailedAttemptAsync(User user)
     {
+        // La demo nunca se bloquea: sus credenciales son publicas y cualquiera
+        // podria dejarla inservible para todos. La fuerza bruta contra ella ya
+        // la frena el limite por IP, y no hay nada que adivinar.
+        if (user.Email == DemoDataSeeder.DemoEmail)
+        {
+            return;
+        }
+
         user.FailedLoginCount++;
 
         if (user.FailedLoginCount >= MaxFailedLogins)

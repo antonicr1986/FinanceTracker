@@ -23,11 +23,31 @@ public static class DatabaseInitializer
     /// <summary>Tiempo maximo esperando el cerrojo (la otra replica migrando).</summary>
     private static readonly TimeSpan LockTimeout = TimeSpan.FromMinutes(2);
 
+    /// <summary>
+    /// Al arrancar: migra y deja la demo como recien creada (ver
+    /// DemoDataSeeder.ResetAsync). Asi cada arranque, que en el plan gratuito
+    /// llega tras un rato sin visitas, limpia lo que hubieran dejado otros.
+    /// </summary>
     public static async Task MigrateAndSeedAsync(AppDbContext db)
     {
         await CreateDatabaseIfMissingAsync(db);
+        await WithLockAsync(db, async () =>
+        {
+            await db.Database.MigrateAsync();
+            await DemoDataSeeder.ResetAsync(db);
+        });
+    }
 
-        // Abrir la conexion a mano hace que EF use esta misma para migrar: el
+    /// <summary>
+    /// Reinicio programado de la demo (DemoResetService), con el mismo cerrojo:
+    /// con varias replicas, una lo hace y las demas lo repiten despues sin chocar.
+    /// </summary>
+    public static Task ResetDemoAsync(AppDbContext db) =>
+        WithLockAsync(db, () => DemoDataSeeder.ResetAsync(db));
+
+    private static async Task WithLockAsync(AppDbContext db, Func<Task> work)
+    {
+        // Abrir la conexion a mano hace que EF use esta misma para todo: el
         // cerrojo es de la sesion, asi que cubre todo lo que se hace con ella.
         await db.Database.OpenConnectionAsync();
         try
@@ -35,8 +55,7 @@ public static class DatabaseInitializer
             await AcquireLockAsync(db);
             try
             {
-                await db.Database.MigrateAsync();
-                await DemoDataSeeder.SeedAsync(db);
+                await work();
             }
             finally
             {

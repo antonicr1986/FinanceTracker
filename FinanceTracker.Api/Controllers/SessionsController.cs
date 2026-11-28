@@ -1,4 +1,5 @@
 ﻿using FinanceTracker.Application.Interfaces;
+using FinanceTracker.Api.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,7 +37,11 @@ public class SessionsController : ControllerBase
             return Unauthorized();
         }
 
-        await _sessionService.RevokeAllAsync(userId);
+        if (!await _sessionService.RevokeAllAsync(userId))
+        {
+            return ApiProblems.Of(StatusCodes.Status403Forbidden, "demo_account",
+                "The demo account is shared by every visitor: its sessions cannot be closed.");
+        }
 
         return NoContent();
     }

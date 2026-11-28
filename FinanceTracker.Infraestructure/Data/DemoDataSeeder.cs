@@ -41,6 +41,42 @@ public static class DemoDataSeeder
         context.Users.Add(user);
         await context.SaveChangesAsync();
 
+        await AddSampleDataAsync(context, user);
+    }
+
+    /// <summary>
+    /// Deja la demo como recien creada: borra lo que hayan cambiado los
+    /// visitantes (movimientos, presupuestos, categorias, nombre) y vuelve a
+    /// sembrar sus datos de ejemplo, con los ultimos seis meses hasta hoy. La
+    /// cuenta es la misma (mismo id), asi que las sesiones abiertas siguen.
+    /// </summary>
+    public static async Task ResetAsync(AppDbContext context)
+    {
+        var user = await context.Users.SingleOrDefaultAsync(candidate => candidate.Email == DemoEmail);
+
+        if (user is null)
+        {
+            await SeedAsync(context);
+            return;
+        }
+
+        // Primero lo que apunta a las categorias; despues, las categorias.
+        context.Transactions.RemoveRange(context.Transactions.Where(t => t.UserId == user.Id));
+        context.Budgets.RemoveRange(context.Budgets.Where(b => b.UserId == user.Id));
+        await context.SaveChangesAsync();
+
+        context.Categories.RemoveRange(context.Categories.Where(c => c.UserId == user.Id));
+        user.Name = DemoName;
+        user.FailedLoginCount = 0;
+        user.LockoutEnd = null;
+        await context.SaveChangesAsync();
+
+        await AddSampleDataAsync(context, user);
+    }
+
+    private static async Task AddSampleDataAsync(AppDbContext context, User user)
+    {
+
         var categories = new Dictionary<string, Category>
         {
             ["Nomina"] = new() { Name = "Nomina", Type = TransactionType.Income, UserId = user.Id },

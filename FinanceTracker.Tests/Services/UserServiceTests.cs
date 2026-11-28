@@ -313,6 +313,29 @@ public class UserServiceTests
     }
 
     [Fact]
+    public async Task LoginAsync_ShouldNeverLockTheDemoAccount()
+    {
+        // Sus credenciales son publicas: si 5 fallos la bloquearan, cualquier
+        // visitante podria dejarla inservible 15 minutos para todos.
+        using var context = CreateDbContext();
+        await DemoDataSeeder.SeedAsync(context);
+        var service = CreateService(context);
+
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            await service.LoginAsync(new LoginUserDto { Email = DemoDataSeeder.DemoEmail, Password = "wrong-password" });
+        }
+
+        var result = await service.LoginAsync(new LoginUserDto
+        {
+            Email = DemoDataSeeder.DemoEmail,
+            Password = DemoDataSeeder.DemoPassword // gitleaks:allow
+        });
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
     public async Task LoginAsync_ShouldReturnNull_WhenEmailDoesNotExist()
     {
         // Arrange

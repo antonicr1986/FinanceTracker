@@ -30,17 +30,20 @@ public class SessionService : ISessionService
         return user.SessionsRevokedAt is null || issuedAt >= user.SessionsRevokedAt;
     }
 
-    public async Task RevokeAllAsync(int userId)
+    public async Task<bool> RevokeAllAsync(int userId)
     {
         var user = await _context.Users.FindAsync(userId);
 
-        if (user is null)
+        // La demo la comparten todos los visitantes: cerrar sus sesiones los
+        // echaria a todos.
+        if (user is null || user.Email == DemoDataSeeder.DemoEmail)
         {
-            return;
+            return false;
         }
 
         Revoke(user);
         await _context.SaveChangesAsync();
+        return true;
     }
 
     /// <summary>
