@@ -8,7 +8,7 @@ api:
     # Etiqueta de la imagen: la del commit que esta en produccion (sha-...),
     # nunca "latest". La actualiza el CI (job chart-image-tag) tras cada
     # despliegue correcto, asi Git dice siempre que version desplegar.
-    tag: sha-9bbff586a7f0f219f3cef1a630cd7cc5e8948ec1
+    tag: sha-2e5c35fe87b58b01b6b481d15ca28e565d7a4e15
     pullPolicy: IfNotPresent
   # Replicas fijas. Si autoscaling.enabled es true, las decide el HPA entre
   # minReplicas y maxReplicas y este valor no se usa.
